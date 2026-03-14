@@ -1,5 +1,7 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
+#define MINIAUDIO_IMPLEMENTATION
+#include "miniaudio.h"
 #include "Game.h"
 
 
@@ -31,8 +33,12 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
 int main(void)
 {
 	GLFWwindow* window;
+	ma_engine engine;
 	double timePerFrame = 1.f / TARGET_FRAMERATE, timePreviousFrame, currentTime;
-
+	if (ma_engine_init(NULL, &engine) != MA_SUCCESS) {
+		// Handle audio init failure
+		return -1;
+	}
 	/* Initialize the library */
 	if (!glfwInit())
 		return -1;
@@ -62,7 +68,7 @@ int main(void)
 	/* Init step of the game loop */
 	Game::instance().init();
 	timePreviousFrame = glfwGetTime();
-
+	ma_engine_play_sound(&engine, "bgm/bgm.mp3", NULL);
 	/* Loop until the user closes the window */
 	while (!glfwWindowShouldClose(window))
 	{

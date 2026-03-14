@@ -28,10 +28,10 @@ private:
 	bool bJumping;
 	glm::ivec2 tileMapDispl, posPlayer;
 	int jumpAngle, startY;
-	Texture spritesheet;
-	Sprite *sprite;
+	Texture spritesheet, healthTexture;
+	Sprite *sprite, *healthSprite;
 	TileMap *map;
-
+	int health;
 };
 
 

@@ -1,1 +1,37 @@
 .vs/
+
+# Visual Studio user/cache
+*.VC.db
+*.VC.VC.opendb
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+ipch/
+
+# Build output (solution/project)
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+out/
+[Bb]in/
+[Oo]bj/
+
+# C/C++ temporary files
+*.obj
+*.o
+*.idb
+*.ilk
+*.pdb
+*.pch
+*.tlog
+*.lastbuildstate
+*.recipe
+*.log
+
+# Test and profiler artifacts
+TestResults/
+*.trx
+*.coverage
+*.coveragexml

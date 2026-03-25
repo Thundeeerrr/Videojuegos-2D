@@ -8,6 +8,27 @@
 #include "Game.h"
 
 
+glm::vec4 calculateMenuUV(float leftX, float rightX, float row, float IMG_W, float IMG_H)
+{
+	float uvSizeX = (rightX - leftX) / IMG_W;
+	float uvSizeY = (IMG_H * 0.5f) / IMG_H;
+	float uvOffsetX = leftX / IMG_W;
+	float uvOffsetY = (row * (IMG_H * 0.5f)) / IMG_H;
+
+	return glm::vec4(uvSizeX, uvSizeY, uvOffsetX, uvOffsetY);
+}
+
+glm::vec4 calculateUV(float leftX, float rightX, float topY, float bottomY, float IMG_W, float IMG_H)
+{
+	float uvSizeX = (rightX - leftX) / IMG_W;
+	float uvSizeY = (bottomY - topY) / IMG_H;
+	float uvOffsetX = leftX / IMG_W;
+	float uvOffsetY = topY / IMG_H;
+
+	return glm::vec4(uvSizeX, uvSizeY, uvOffsetX, uvOffsetY);
+}
+
+
 Menu::Menu()
 {
 	backgroundSprite = NULL;
@@ -36,21 +57,17 @@ void Menu::init()
 	menuSheet.setMinFilter(GL_NEAREST);
 	menuSheet.setMagFilter(GL_NEAREST);
 
-	// Dimensiones de la imagen
-	const float IMG_W = 779.f;
-	const float IMG_H = 294.f;
+	cursorSheet.loadFromFile("images/MenuStuff.png", TEXTURE_PIXEL_FORMAT_RGBA);
+	cursorSheet.setWrapS(GL_CLAMP_TO_EDGE);
+	cursorSheet.setWrapT(GL_CLAMP_TO_EDGE);
+	cursorSheet.setMinFilter(GL_NEAREST);
+	cursorSheet.setMagFilter(GL_NEAREST);
 
-	// ← Solo cambia estos dos valores (píxel X izquierdo y derecho del trozo)
-	const float BLUE_X_LEFT = 325.f;
-	const float BLUE_X_RIGHT = 484.f;
-	// Si quieres la fila de abajo, cambia ROW a 1
-	const float ROW = 0.f;
-
-	// Cálculos automáticos
-	float uvSizeX = (BLUE_X_RIGHT - BLUE_X_LEFT) / IMG_W;
-	float uvSizeY = 0.5f;  // siempre 0.5 porque hay 2 filas
-	float uvOffsetX = BLUE_X_LEFT / IMG_W;
-	float uvOffsetY = ROW * 0.5f;
+ glm::vec4 uvData = calculateMenuUV(325.f, 484.f, 0.f, 779.f, 294.f);
+	float uvSizeX = uvData.x;
+	float uvSizeY = uvData.y;
+	float uvOffsetX = uvData.z;
+	float uvOffsetY = uvData.w;
 
 	backgroundSprite = Sprite::createSprite(
 		glm::ivec2(SCREEN_WIDTH, SCREEN_HEIGHT),
@@ -64,20 +81,26 @@ void Menu::init()
 	backgroundSprite->changeAnimation(0);
 	backgroundSprite->setPosition(glm::vec2(0.f, 0.f));
 
+	uvData = calculateUV(2.f, 8.f, 2.f, 9.f, 66.f, 30.f);
+	uvSizeX = uvData.x;
+	uvSizeY = uvData.y;
+	uvOffsetX = uvData.z;
+	uvOffsetY = uvData.w;
+
 	cursorSprite = Sprite::createSprite(
-		glm::ivec2(16, 16),
-		glm::vec2(0.02f, 0.034f),
-		&menuSheet,
+		glm::ivec2(32, 32),
+		glm::vec2(uvSizeX, uvSizeY),
+		&cursorSheet,
 		&texProgram
 	);
 	cursorSprite->setNumberAnimations(1);
 	cursorSprite->setAnimationSpeed(0, 1);
-	cursorSprite->addKeyframe(0, glm::vec2(0.f, 0.f));
+	cursorSprite->addKeyframe(0, glm::vec2(uvOffsetX, uvOffsetY));
 	cursorSprite->changeAnimation(0);
 
-	optionPositions[0] = glm::vec2(260.f, 280.f);
-	optionPositions[1] = glm::vec2(260.f, 320.f);
-	optionPositions[2] = glm::vec2(260.f, 360.f);
+	optionPositions[0] = glm::vec2(450.f, 280.f);
+	optionPositions[1] = glm::vec2(450.f, 320.f);
+	optionPositions[2] = glm::vec2(450.f, 360.f);
 }
 
 void Menu::update(int deltaTime)

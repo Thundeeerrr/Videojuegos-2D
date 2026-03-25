@@ -29,6 +29,7 @@ private:
 	glm::mat4 projection;
 
 	Texture menuSheet;
+   Texture cursorSheet;
 	Sprite *backgroundSprite;
 	Sprite *cursorSprite;
 

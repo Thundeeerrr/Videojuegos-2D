@@ -29,9 +29,11 @@ private:
 	glm::mat4 projection;
 
 	Texture menuSheet;
-   Texture cursorSheet;
+ Texture cursorSheet;
 	Sprite *backgroundSprite;
 	Sprite *cursorSprite;
+	Sprite *startSprite;
+	Sprite *passwordSprite;
 
 	int selectedOption;
 	static const int NUM_OPTIONS = 3;

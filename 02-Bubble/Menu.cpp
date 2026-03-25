@@ -33,6 +33,8 @@ Menu::Menu()
 {
 	backgroundSprite = NULL;
 	cursorSprite = NULL;
+ startSprite = NULL;
+	passwordSprite = NULL;
 	selectedOption = 0;
 }
 
@@ -42,6 +44,10 @@ Menu::~Menu()
 		delete backgroundSprite;
 	if(cursorSprite != NULL)
 		delete cursorSprite;
+  if(startSprite != NULL)
+		delete startSprite;
+	if(passwordSprite != NULL)
+		delete passwordSprite;
 	texProgram.free();
 }
 
@@ -98,6 +104,42 @@ void Menu::init()
 	cursorSprite->addKeyframe(0, glm::vec2(uvOffsetX, uvOffsetY));
 	cursorSprite->changeAnimation(0);
 
+	uvData = calculateUV(2.f, 40.f, 11.f, 19.f, 66.f, 30.f);
+	uvSizeX = uvData.x;
+	uvSizeY = uvData.y;
+	uvOffsetX = uvData.z;
+	uvOffsetY = uvData.w;
+
+	startSprite = Sprite::createSprite(
+		glm::ivec2(120, 24),
+		glm::vec2(uvSizeX, uvSizeY),
+		&cursorSheet,
+		&texProgram
+	);
+	startSprite->setNumberAnimations(1);
+	startSprite->setAnimationSpeed(0, 1);
+	startSprite->addKeyframe(0, glm::vec2(uvOffsetX, uvOffsetY));
+	startSprite->changeAnimation(0);
+	startSprite->setPosition(glm::vec2(470.f, 287.f));
+
+	uvData = calculateUV(2.f, 64.f, 20.f, 28.f, 66.f, 30.f);
+	uvSizeX = uvData.x;
+	uvSizeY = uvData.y;
+	uvOffsetX = uvData.z;
+	uvOffsetY = uvData.w;
+
+	passwordSprite = Sprite::createSprite(
+		glm::ivec2(160, 24),
+		glm::vec2(uvSizeX, uvSizeY),
+		&cursorSheet,
+		&texProgram
+	);
+	passwordSprite->setNumberAnimations(1);
+	passwordSprite->setAnimationSpeed(0, 1);
+	passwordSprite->addKeyframe(0, glm::vec2(uvOffsetX, uvOffsetY));
+	passwordSprite->changeAnimation(0);
+	passwordSprite->setPosition(glm::vec2(470.f, 327.f));
+
 	optionPositions[0] = glm::vec2(450.f, 280.f);
 	optionPositions[1] = glm::vec2(450.f, 320.f);
 	optionPositions[2] = glm::vec2(450.f, 360.f);
@@ -118,6 +160,8 @@ void Menu::render()
 	texProgram.setUniformMatrix4f("modelview", modelview);
 
 	backgroundSprite->render();
+	startSprite->render();
+	passwordSprite->render();
 
 	cursorSprite->setPosition(optionPositions[selectedOption] - glm::vec2(24.f, 0.f));
 	cursorSprite->render();

@@ -90,5 +90,17 @@ void Scene::initShaders()
 	fShader.free();
 }
 
+void Scene::toggleGodMode()
+{
+}
+
+void Scene::giveAllKeys()
+{
+}
+
+void Scene::loadLevel(int levelNum)
+{
+}
+
 
 

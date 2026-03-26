@@ -33,7 +33,7 @@ Menu::Menu()
 {
 	backgroundSprite = NULL;
 	cursorSprite = NULL;
- startSprite = NULL;
+	startSprite = NULL;
 	passwordSprite = NULL;
 	selectedOption = 0;
 }
@@ -94,7 +94,7 @@ void Menu::init()
 	uvOffsetY = uvData.w;
 
 	cursorSprite = Sprite::createSprite(
-		glm::ivec2(32, 32),
+		glm::ivec2(25, 25),
 		glm::vec2(uvSizeX, uvSizeY),
 		&cursorSheet,
 		&texProgram
@@ -120,7 +120,7 @@ void Menu::init()
 	startSprite->setAnimationSpeed(0, 1);
 	startSprite->addKeyframe(0, glm::vec2(uvOffsetX, uvOffsetY));
 	startSprite->changeAnimation(0);
-	startSprite->setPosition(glm::vec2(470.f, 287.f));
+	startSprite->setPosition(glm::vec2(325.f, 350.f));
 
 	uvData = calculateUV(2.f, 64.f, 20.f, 28.f, 66.f, 30.f);
 	uvSizeX = uvData.x;
@@ -138,11 +138,10 @@ void Menu::init()
 	passwordSprite->setAnimationSpeed(0, 1);
 	passwordSprite->addKeyframe(0, glm::vec2(uvOffsetX, uvOffsetY));
 	passwordSprite->changeAnimation(0);
-	passwordSprite->setPosition(glm::vec2(470.f, 327.f));
+	passwordSprite->setPosition(glm::vec2(325.f, 385.f));
 
-	optionPositions[0] = glm::vec2(450.f, 280.f);
-	optionPositions[1] = glm::vec2(450.f, 320.f);
-	optionPositions[2] = glm::vec2(450.f, 360.f);
+	optionPositions[0] = glm::vec2(310.f, 348.f);
+	optionPositions[1] = glm::vec2(310.f, 383.f);
 }
 
 void Menu::update(int deltaTime)
@@ -179,8 +178,7 @@ void Menu::keyPressed(int key)
 			Game::instance().changeState(STATE_PLAYING);
 		else if(selectedOption == 1)
 			Game::instance().changeState(STATE_INSTRUCTIONS);
-		else if(selectedOption == 2)
-			Game::instance().changeState(STATE_CREDITS);
+		
 	}
 }
 

@@ -36,7 +36,7 @@ private:
 	Sprite *passwordSprite;
 
 	int selectedOption;
-	static const int NUM_OPTIONS = 3;
+	static const int NUM_OPTIONS = 2;
 	glm::vec2 optionPositions[NUM_OPTIONS];
 
 };

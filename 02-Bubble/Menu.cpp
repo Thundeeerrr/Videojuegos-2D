@@ -69,7 +69,7 @@ void Menu::init()
 	cursorSheet.setMinFilter(GL_NEAREST);
 	cursorSheet.setMagFilter(GL_NEAREST);
 
- glm::vec4 uvData = calculateMenuUV(325.f, 484.f, 0.f, 779.f, 294.f);
+ glm::vec4 uvData = calculateUV(325.f, 484.f, 2.f, 145.f, 779.f, 294.f);
 	float uvSizeX = uvData.x;
 	float uvSizeY = uvData.y;
 	float uvOffsetX = uvData.z;

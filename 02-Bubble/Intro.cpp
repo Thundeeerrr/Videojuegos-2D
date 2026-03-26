@@ -43,10 +43,10 @@ void Intro::init()
 	sheet.setMagFilter(GL_NEAREST);
 
 	const float IMG_W = 779.f, IMG_H = 294.f;
-	const float LEFT_X = 0.f;
-	const float RIGHT_X = 194.f;
-	const float TOP_Y = 0.f;
-	const float BOT_Y = 147.f;
+	const float LEFT_X = 2.f;
+	const float RIGHT_X = 161.f;
+	const float TOP_Y = 2.f;
+	const float BOT_Y = 145.f;
 	glm::vec4 uv = calculateUV(LEFT_X, RIGHT_X, TOP_Y, BOT_Y, IMG_W, IMG_H);
 
 	if(slide != nullptr)

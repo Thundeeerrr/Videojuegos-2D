@@ -2,12 +2,21 @@
 #define _GAME_INCLUDE
 
 
+#ifndef GLFW_INCLUDE_NONE
+#define GLFW_INCLUDE_NONE
+#endif
 #include <GLFW/glfw3.h>
 #include "Scene.h"
+#include "Menu.h"
+#include "Intro.h"
+#include "Credits.h"
 
 
 #define SCREEN_WIDTH 640
 #define SCREEN_HEIGHT 480
+
+
+enum GameState { STATE_INTRO, STATE_MENU, STATE_PLAYING, STATE_INSTRUCTIONS, STATE_CREDITS };
 
 
 // Game is a singleton (a class with a single instance) that represents our whole application
@@ -37,13 +46,18 @@ public:
 	void mouseMove(int x, int y);
 	void mousePress(int button);
 	void mouseRelease(int button);
+	void changeState(GameState newState);
 
 	bool getKey(int key) const;
 
 private:
 	bool bPlay; // Continue to play game?
-	bool keys[GLFW_KEY_LAST+1]; // Store key states so that 
-							    // we can have access at any time
+    bool keys[GLFW_KEY_LAST+1]; // Store key states so that 
+								// we can have access at any time
+	GameState currentState;
+  Intro intro;
+	Credits credits;
+	Menu menu;
 	Scene scene;
 
 };

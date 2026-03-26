@@ -22,6 +22,9 @@ public:
 	void init();
 	void update(int deltaTime);
 	void render();
+	void toggleGodMode();
+	void giveAllKeys();
+	void loadLevel(int levelNum);
 
 private:
 	void initShaders();

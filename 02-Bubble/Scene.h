@@ -19,7 +19,7 @@ public:
 	Scene();
 	~Scene();
 
-	void init();
+	void init(const std::string& sceneName);
 	void update(int deltaTime);
 	void render();
 	void toggleGodMode();

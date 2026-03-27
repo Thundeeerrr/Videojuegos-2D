@@ -60,6 +60,7 @@ private:
 	Menu menu;
 	Scene scene;
 
+	bool insideRoom;
 };
 
 

@@ -43,11 +43,11 @@ bool Game::update(int deltaTime)
 
 void Game::render()
 {
- GLFWwindow *window;
+	GLFWwindow* window;
 	int framebufferWidth, framebufferHeight;
 
 	window = glfwGetCurrentContext();
-	if(window != NULL)
+	if (window != NULL)
 	{
 		glfwGetFramebufferSize(window, &framebufferWidth, &framebufferHeight);
 		glViewport(0, 0, framebufferWidth, framebufferHeight);
@@ -123,7 +123,7 @@ bool Game::getKey(int key) const
 void Game::changeState(GameState newState)
 {
 	if(newState == STATE_PLAYING)
-		scene.init();
+		scene.init("levels/level01.txt");
 	if(newState == STATE_INTRO)
 		intro.init();
 	if(newState == STATE_CREDITS)

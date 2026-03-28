@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cmath>
+#include <sstream>
 #include <glm/gtc/matrix_transform.hpp>
 #include "Scene.h"
 #include "Game.h"
@@ -101,6 +102,27 @@ void Scene::giveAllKeys()
 
 void Scene::loadLevel(int levelNum)
 {
+   if(levelNum < 1)
+		return;
+
+	if(map != NULL)
+	{
+		delete map;
+		map = NULL;
+	}
+	if(player != NULL)
+	{
+		delete player;
+		player = NULL;
+	}
+
+	stringstream levelPath;
+	levelPath << "levels/level";
+	if(levelNum < 10)
+		levelPath << '0';
+	levelPath << levelNum << ".txt";
+
+	init(levelPath.str());
 }
 
 

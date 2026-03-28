@@ -93,7 +93,7 @@ void Game::keyPressed(int key)
 			scene.toggleGodMode();
 		else if(key == GLFW_KEY_K)
 			scene.giveAllKeys();
-		else if(key >= GLFW_KEY_1 && key <= GLFW_KEY_5)
+     else if(key >= GLFW_KEY_1 && key <= GLFW_KEY_9)
 			scene.loadLevel(key - GLFW_KEY_1 + 1);
 	}
 }
@@ -123,7 +123,7 @@ bool Game::getKey(int key) const
 void Game::changeState(GameState newState)
 {
 	if(newState == STATE_PLAYING)
-		scene.init("levels/level02.txt");
+       scene.loadLevel(2);
 	if(newState == STATE_INTRO)
 		intro.init();
 	if(newState == STATE_CREDITS)

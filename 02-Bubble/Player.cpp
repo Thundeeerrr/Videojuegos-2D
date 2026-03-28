@@ -36,7 +36,7 @@ void Player::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 	bJumping = false;
 	spritesheet.loadFromFile("images/bub.png", TEXTURE_PIXEL_FORMAT_RGBA);
 	healthTexture.loadFromFile("images/heart.png", TEXTURE_PIXEL_FORMAT_RGBA);
-	sprite = Sprite::createSprite(glm::ivec2(32, 32), glm::vec2(0.25, 0.25), &spritesheet, &shaderProgram);
+	sprite = Sprite::createSprite(glm::ivec2(16, 16), glm::vec2(0.25, 0.25), &spritesheet, &shaderProgram);
 	healthSprite = Sprite::createSprite(glm::ivec2(16, 16), glm::vec2(1.0, 1.0), &healthTexture, &shaderProgram);
 	sprite->setNumberAnimations(4);
 	
@@ -70,7 +70,7 @@ void Player::update(int deltaTime)
 		if(sprite->animation() != MOVE_LEFT)
 			sprite->changeAnimation(MOVE_LEFT);
 		posPlayer.x -= 2;
-		if(map->collisionMoveLeft(posPlayer, glm::ivec2(32, 32)))
+		if(map->collisionMoveLeft(posPlayer, glm::ivec2(16, 16)))
 		{
 			posPlayer.x += 2;
 			sprite->changeAnimation(STAND_LEFT);
@@ -81,7 +81,7 @@ void Player::update(int deltaTime)
 		if(sprite->animation() != MOVE_RIGHT)
 			sprite->changeAnimation(MOVE_RIGHT);
 		posPlayer.x += 2;
-		if(map->collisionMoveRight(posPlayer, glm::ivec2(32, 32)))
+		if(map->collisionMoveRight(posPlayer, glm::ivec2(16, 16)))
 		{
 			posPlayer.x -= 2;
 			sprite->changeAnimation(STAND_RIGHT);
@@ -95,32 +95,15 @@ void Player::update(int deltaTime)
 			sprite->changeAnimation(STAND_RIGHT);
 	}
 	
-	if(bJumping)
+	
+	posPlayer.y += FALL_STEP;
+	if(map->collisionMoveDown(posPlayer, glm::ivec2(16, 16), &posPlayer.y))
 	{
-		jumpAngle += JUMP_ANGLE_STEP;
-		if(jumpAngle == 180)
+		if(Game::instance().getKey(GLFW_KEY_UP))
 		{
-			bJumping = false;
-			posPlayer.y = startY;
-		}
-		else
-		{
-			posPlayer.y = int(startY - 96 * sin(3.14159f * jumpAngle / 180.f));
-			if(jumpAngle > 90)
-				bJumping = !map->collisionMoveDown(posPlayer, glm::ivec2(32, 32), &posPlayer.y);
-		}
-	}
-	else
-	{
-		posPlayer.y += FALL_STEP;
-		if(map->collisionMoveDown(posPlayer, glm::ivec2(32, 32), &posPlayer.y))
-		{
-			if(Game::instance().getKey(GLFW_KEY_UP))
-			{
-				bJumping = true;
-				jumpAngle = 0;
-				startY = posPlayer.y;
-			}
+			bJumping = true;
+			jumpAngle = 0;
+			startY = posPlayer.y;
 		}
 	}
 	

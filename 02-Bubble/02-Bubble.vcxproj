@@ -40,7 +40,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\..\..\..\Users\zihen\Downloads\BugsBunnyCrazyCastle3-Stage1_v2.png" />
-    <None Include="..\..\..\..\..\Users\zihen\Downloads\level1.png" />
     <None Include="docs\main_menu.md">
       <SubType>
       </SubType>

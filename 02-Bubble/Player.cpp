@@ -112,14 +112,14 @@ void Player::update(int deltaTime)
 
 void Player::render()
 {
-	sprite->render();
-	glm::vec2 healthPos = glm::vec2(10.0f, 10.0f);
-	for (int i = 0; i < health; i++)
-	{
-		healthSprite->setPosition(healthPos);
-		healthSprite->render();
-		healthPos.x += 20.f;
-	}
+   // sprite->render();
+	// glm::vec2 healthPos = glm::vec2(10.0f, 10.0f);
+	// for (int i = 0; i < health; i++)
+	// {
+	// 	healthSprite->setPosition(healthPos);
+	// 	healthSprite->render();
+	// 	healthPos.x += 20.f;
+	// }
 }
 
 void Player::setTileMap(TileMap *tileMap)

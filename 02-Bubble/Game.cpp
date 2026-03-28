@@ -123,7 +123,7 @@ bool Game::getKey(int key) const
 void Game::changeState(GameState newState)
 {
 	if(newState == STATE_PLAYING)
-		scene.init("levels/level01.txt");
+		scene.init("levels/level02.txt");
 	if(newState == STATE_INTRO)
 		intro.init();
 	if(newState == STATE_CREDITS)

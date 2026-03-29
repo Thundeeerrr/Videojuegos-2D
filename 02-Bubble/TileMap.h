@@ -4,6 +4,7 @@
 
 #include <glm/glm.hpp>
 #include <set>
+#include <vector>
 #include "Texture.h"
 #include "ShaderProgram.h"
 
@@ -35,6 +36,7 @@ public:
 	bool collisionMoveRight(const glm::ivec2 &pos, const glm::ivec2 &size) const;
 	bool collisionMoveDown(const glm::ivec2 &pos, const glm::ivec2 &size, int *posY) const;
 	glm::vec2 getMapSize() const;
+	const vector<glm::ivec2> &getDoorPositions() const { return doorPositions; }
 	
 private:
 	bool loadLevel(const string &levelFile);
@@ -51,6 +53,7 @@ private:
 	glm::vec2 tileTexSize;
 	int *map;
 	set<int> collidedTiles;
+  vector<glm::ivec2> doorPositions;
 };
 
 

@@ -7,6 +7,11 @@
 
 using namespace std;
 
+namespace
+{
+	const int TILE_DOOR = 999;
+}
+
 
 TileMap *TileMap::createTileMap(const string &levelFile, const glm::vec2 &minCoords, ShaderProgram &program)
 {
@@ -81,6 +86,7 @@ bool TileMap::loadLevel(const string &levelFile)
 
 	// Read the collided tiles, first read the quantity of collided tiles and then the tile ids. Clear the set of collided tiles before reading them in case of changing levels.
 	collidedTiles.clear();
+ doorPositions.clear();
 	getline(fin, line);
 	sstream.clear();
 	sstream.str(line);
@@ -101,7 +107,13 @@ bool TileMap::loadLevel(const string &levelFile)
 		for (int i = 0; i < mapSize.x; i++)
 		{
 			fin >> tileId; // This safely reads 1, 9, 10, or 45, automatically ignoring spaces!
-			map[j * mapSize.x + i] = tileId;
+            if(tileId == TILE_DOOR)
+			{
+				doorPositions.push_back(glm::ivec2(i, j));
+				map[j * mapSize.x + i] = -1;
+			}
+			else
+				map[j * mapSize.x + i] = tileId;
 		}
 	}
 	fin.close();
@@ -122,6 +134,8 @@ void TileMap::prepareArrays(const glm::vec2 &minCoords, ShaderProgram &program)
 		for(int i=0; i<mapSize.x; i++)
 		{
 			tile = map[j * mapSize.x + i];
+           if(tile < 0)
+				continue;
 			// Non-empty tile
 			nTiles++;
 			posTile = glm::vec2(minCoords.x + i * tileSize, minCoords.y + j * tileSize);

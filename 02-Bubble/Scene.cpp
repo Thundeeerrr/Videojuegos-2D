@@ -17,6 +17,7 @@ Scene::Scene()
 {
 	map = NULL;
 	player = NULL;
+   dWasPressed = false;
 }
 
 Scene::~Scene()
@@ -26,13 +27,22 @@ Scene::~Scene()
 		delete map;
 	if(player != NULL)
 		delete player;
+   freeDoors();
 }
 
 
 void Scene::init(const std::string &sceneName)
 {
 	initShaders();
+ freeDoors();
 	map = TileMap::createTileMap(sceneName, glm::vec2(SCREEN_X, SCREEN_Y), texProgram);
+    const std::vector<glm::ivec2> &doorPositions = map->getDoorPositions();
+	for(int i=0; i<int(doorPositions.size()); ++i)
+	{
+		Door *door = new Door();
+		door->init(doorPositions[i], texProgram);
+		doors.push_back(door);
+	}
 	player = new Player();
 	player->init(glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
 	player->setPosition(glm::vec2(INIT_PLAYER_X_TILES * map->getTileSize(), INIT_PLAYER_Y_TILES * map->getTileSize()));
@@ -40,11 +50,22 @@ void Scene::init(const std::string &sceneName)
 	projection = glm::ortho(0.f, float(map->getMapSize().x * map->getTileSize()), float(map->getMapSize().y * map->getTileSize()), 0.f);
 	//projection = glm::ortho(0.f, float(SCREEN_WIDTH), float(SCREEN_HEIGHT), 0.f);
 	currentTime = 0.0f;
+   dWasPressed = false;
 }
 
 void Scene::update(int deltaTime)
 {
 	currentTime += deltaTime;
+  bool dPressed = Game::instance().getKey(GLFW_KEY_D);
+	if(dPressed && !dWasPressed)
+	{
+		for(int i=0; i<int(doors.size()); ++i)
+			doors[i]->toggleOpen();
+	}
+	dWasPressed = dPressed;
+
+	for(int i=0; i<int(doors.size()); ++i)
+		doors[i]->update(deltaTime);
 	player->update(deltaTime);
 }
 
@@ -59,7 +80,16 @@ void Scene::render()
 	texProgram.setUniformMatrix4f("modelview", modelview);
 	texProgram.setUniform2f("texCoordDispl", 0.f, 0.f);
 	map->render();
+   for(int i=0; i<int(doors.size()); ++i)
+		doors[i]->render();
 	player->render();
+}
+
+void Scene::freeDoors()
+{
+	for(int i=0; i<int(doors.size()); ++i)
+		delete doors[i];
+	doors.clear();
 }
 
 void Scene::initShaders()

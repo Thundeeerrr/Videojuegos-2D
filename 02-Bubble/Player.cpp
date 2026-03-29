@@ -95,16 +95,18 @@ void Player::update(int deltaTime)
 			sprite->changeAnimation(STAND_RIGHT);
 	}
 	
-	
-	posPlayer.y += FALL_STEP;
-	if(map->collisionMoveDown(posPlayer, glm::ivec2(16, 16), &posPlayer.y))
+	bool isTouchingStair = map->isStairTile(posPlayer);
+	if (isTouchingStair)
 	{
-		if(Game::instance().getKey(GLFW_KEY_UP))
-		{
-			bJumping = true;
-			jumpAngle = 0;
-			startY = posPlayer.y;
-		}
+		if (Game::instance().getKey(GLFW_KEY_SPACE))	cout << "Player is touching a stair tile and space is pressed." << endl;
+		if (Game::instance().getKey(GLFW_KEY_UP))	posPlayer.y -= 2;
+		if (Game::instance().getKey(GLFW_KEY_DOWN))	posPlayer.y += 2;
+	}
+	else 
+	{
+		if (Game::instance().getKey(GLFW_KEY_SPACE))	cout << "Player is not touching a stair tile and space is pressed." << endl;
+		posPlayer.y += FALL_STEP;
+		map->collisionMoveDown(posPlayer, glm::ivec2(16, 16), &posPlayer.y);
 	}
 	
 	sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y)));
@@ -112,14 +114,14 @@ void Player::update(int deltaTime)
 
 void Player::render()
 {
-   // sprite->render();
-	// glm::vec2 healthPos = glm::vec2(10.0f, 10.0f);
-	// for (int i = 0; i < health; i++)
-	// {
-	// 	healthSprite->setPosition(healthPos);
-	// 	healthSprite->render();
-	// 	healthPos.x += 20.f;
-	// }
+	sprite->render();
+	glm::vec2 healthPos = glm::vec2(0.0f, 0.0f);
+	for (int i = 0; i < health; i++)
+	{
+		healthSprite->setPosition(healthPos);
+		healthSprite->render();
+		healthPos.x += 15.f;
+	}
 }
 
 void Player::setTileMap(TileMap *tileMap)

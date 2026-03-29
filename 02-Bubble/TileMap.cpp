@@ -3,7 +3,7 @@
 #include <sstream>
 #include <vector>
 #include "TileMap.h"
-
+#include "Game.h"
 
 using namespace std;
 
@@ -99,6 +99,11 @@ bool TileMap::loadLevel(const string &levelFile)
 			collidedTiles.insert(cTileId);
 		}
 	}
+
+	getline(fin, line);
+	sstream.clear();
+	sstream.str(line);
+	sstream >> stair;
 
 	map = new int[mapSize.x * mapSize.y];
 	int tileId;
@@ -219,21 +224,42 @@ bool TileMap::collisionMoveDown(const glm::ivec2 &pos, const glm::ivec2 &size, i
 	x0 = pos.x / tileSize;
 	x1 = (pos.x + size.x - 1) / tileSize;
 	y = (pos.y + size.y - 1) / tileSize;
+	bool tryToClimbDown = Game::instance().getKey(GLFW_KEY_DOWN);
 	for(int x=x0; x<=x1; x++)
 	{
 		int tile = map[y * mapSize.x + x];
 		if(collidedTiles.find(tile) != collidedTiles.end())
 		{
-			if(*posY - tileSize * y + size.y <= 4)
+			//if (tile == stair && tryToClimbDown)	continue;
+			if (*posY - tileSize * y + size.y <= 4)
 			{
 				*posY = tileSize * y - size.y;
-				cout << "Collision with tile " << tile << " at (" << x << ", " << y << ")" << endl;
 				return true;
 			}
+			//return true;
 		}
 	}
 	
 	return false;
+}
+
+bool TileMap::isStairTile(const glm::ivec2& pos) const
+{
+	// Probe point = bottom-center of a 16x16 player.
+	// If you later change player size, refactor these into parameters.
+	const int playerW = 16;
+	const int playerH = 16;
+
+	const int probeX = pos.x + playerW / 2;
+	const int probeY = pos.y + playerH;
+
+	const int x = probeX / tileSize;
+	const int y = probeY / tileSize;
+
+	if (x < 0 || x >= mapSize.x || y < 0 || y >= mapSize.y)
+		return false;
+
+	return map[y * mapSize.x + x] == stair;
 }
 
 glm::vec2 TileMap::getMapSize() const

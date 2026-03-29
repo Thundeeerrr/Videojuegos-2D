@@ -28,6 +28,7 @@ public:
 	void giveAllKeys();
 	void loadLevel(int levelNum);
 	void loadLevelFile(const std::string &levelPath); // Added back for clarity
+	bool isGodMode() const;
 
 private:
 	void initShaders();
@@ -42,6 +43,7 @@ private:
 	glm::mat4 projection;
 	bool dWasPressed;
 
+	bool godMode;
 };
 
 

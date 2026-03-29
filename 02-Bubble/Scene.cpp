@@ -9,8 +9,8 @@
 #define SCREEN_X 0
 #define SCREEN_Y 0
 
-#define INIT_PLAYER_X_TILES 3
-#define INIT_PLAYER_Y_TILES 1
+#define INIT_PLAYER_X_TILES 9
+#define INIT_PLAYER_Y_TILES 4
 
 
 Scene::Scene()
@@ -124,6 +124,7 @@ void Scene::initShaders()
 
 void Scene::toggleGodMode()
 {
+	godMode = !godMode;
 }
 
 void Scene::giveAllKeys()
@@ -160,5 +161,8 @@ void Scene::loadLevel(int levelNum)
 	init(levelPath.str());
 }
 
-
+bool Scene::isGodMode() const
+{
+	return godMode;
+}
 

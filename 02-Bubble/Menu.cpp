@@ -87,7 +87,7 @@ void Menu::init()
 	backgroundSprite->changeAnimation(0);
 	backgroundSprite->setPosition(glm::vec2(0.f, 0.f));
 
-	uvData = calculateUV(2.f, 8.f, 2.f, 9.f, 66.f, 30.f);
+	uvData = calculateUV(2.f, 8.f, 2.f, 9.f, 67.f, 38.f);
 	uvSizeX = uvData.x;
 	uvSizeY = uvData.y;
 	uvOffsetX = uvData.z;
@@ -104,7 +104,7 @@ void Menu::init()
 	cursorSprite->addKeyframe(0, glm::vec2(uvOffsetX, uvOffsetY));
 	cursorSprite->changeAnimation(0);
 
-	uvData = calculateUV(2.f, 40.f, 11.f, 19.f, 66.f, 30.f);
+	uvData = calculateUV(2.f, 40.f, 11.f, 19.f, 67.f, 38.f);
 	uvSizeX = uvData.x;
 	uvSizeY = uvData.y;
 	uvOffsetX = uvData.z;
@@ -122,14 +122,14 @@ void Menu::init()
 	startSprite->changeAnimation(0);
 	startSprite->setPosition(glm::vec2(325.f, 350.f));
 
-	uvData = calculateUV(2.f, 64.f, 20.f, 28.f, 66.f, 30.f);
+	uvData = calculateUV(1.f, 36.f, 28.f, 36.f, 67.f, 38.f);
 	uvSizeX = uvData.x;
 	uvSizeY = uvData.y;
 	uvOffsetX = uvData.z;
 	uvOffsetY = uvData.w;
 
 	passwordSprite = Sprite::createSprite(
-		glm::ivec2(160, 24),
+		glm::ivec2(120, 24),
 		glm::vec2(uvSizeX, uvSizeY),
 		&cursorSheet,
 		&texProgram

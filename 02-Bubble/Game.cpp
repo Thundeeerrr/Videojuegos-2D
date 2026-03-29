@@ -11,6 +11,7 @@ void Game::init()
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
    intro.init();
 	credits.init();
+ instructions.init();
 	currentState = STATE_INTRO;
 }
 
@@ -28,6 +29,9 @@ bool Game::update(int deltaTime)
 		break;
 	case STATE_PLAYING:
 		scene.update(deltaTime);
+		break;
+ case STATE_INSTRUCTIONS:
+		instructions.update(deltaTime);
 		break;
 	case STATE_CREDITS:
 		credits.update(deltaTime);
@@ -66,6 +70,9 @@ void Game::render()
 	case STATE_PLAYING:
 		scene.render();
 		break;
+ case STATE_INSTRUCTIONS:
+		instructions.render();
+		break;
 	case STATE_CREDITS:
 		credits.render();
 		break;
@@ -87,6 +94,11 @@ void Game::keyPressed(int key)
 		credits.skip();
 	else if(currentState == STATE_MENU)
 		menu.keyPressed(key);
+  else if(currentState == STATE_INSTRUCTIONS)
+	{
+		if(key == GLFW_KEY_ENTER || key == GLFW_KEY_KP_ENTER || key == GLFW_KEY_BACKSPACE)
+			changeState(STATE_MENU);
+	}
 	else if(currentState == STATE_PLAYING)
 	{
 		if(key == GLFW_KEY_G)
@@ -130,6 +142,8 @@ void Game::changeState(GameState newState)
 		intro.init();
 	if(newState == STATE_CREDITS)
 		credits.init();
+  if(newState == STATE_INSTRUCTIONS)
+		instructions.init();
 	if(newState == STATE_MENU)
 		menu.init();
 

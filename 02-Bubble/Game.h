@@ -10,6 +10,7 @@
 #include "Menu.h"
 #include "Intro.h"
 #include "Credits.h"
+#include "Instructions.h"
 
 
 #define SCREEN_WIDTH 640
@@ -57,6 +58,7 @@ private:
 	GameState currentState;
   Intro intro;
 	Credits credits;
+  Instructions instructions;
 	Menu menu;
 	Scene scene;
 

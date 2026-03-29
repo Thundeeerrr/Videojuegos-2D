@@ -99,12 +99,19 @@ void Player::update(int deltaTime)
 	if (isTouchingStair)
 	{
 		if (Game::instance().getKey(GLFW_KEY_SPACE))	cout << "Player is touching a stair tile and space is pressed." << endl;
-		if (Game::instance().getKey(GLFW_KEY_UP))	posPlayer.y -= 2;
-		if (Game::instance().getKey(GLFW_KEY_DOWN))	posPlayer.y += 2;
+		if (Game::instance().getKey(GLFW_KEY_UP))	
+		{
+			posPlayer.y -= 2;
+			if (!map->isStairTile(posPlayer))	posPlayer.y += 2;
+		}
+		if (Game::instance().getKey(GLFW_KEY_DOWN))	
+		{
+			posPlayer.y += 2;
+			map->collisionMoveDown(posPlayer, glm::ivec2(16, 16), &posPlayer.y);
+		}
 	}
 	else 
 	{
-		if (Game::instance().getKey(GLFW_KEY_SPACE))	cout << "Player is not touching a stair tile and space is pressed." << endl;
 		posPlayer.y += FALL_STEP;
 		map->collisionMoveDown(posPlayer, glm::ivec2(16, 16), &posPlayer.y);
 	}

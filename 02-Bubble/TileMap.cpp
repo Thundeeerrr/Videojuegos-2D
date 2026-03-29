@@ -228,9 +228,9 @@ bool TileMap::collisionMoveDown(const glm::ivec2 &pos, const glm::ivec2 &size, i
 	for(int x=x0; x<=x1; x++)
 	{
 		int tile = map[y * mapSize.x + x];
+		if (tryToClimbDown) cout << "Trying to climb down. Checking tile at (" << x << ", " << y << ") with tile ID: " << tile << endl;
 		if(collidedTiles.find(tile) != collidedTiles.end())
 		{
-			//if (tile == stair && tryToClimbDown)	continue;
 			if (*posY - tileSize * y + size.y <= 4)
 			{
 				*posY = tileSize * y - size.y;
@@ -251,15 +251,15 @@ bool TileMap::isStairTile(const glm::ivec2& pos) const
 	const int playerH = 16;
 
 	const int probeX = pos.x + playerW / 2;
-	const int probeY = pos.y + playerH;
+	const int probeY0 = pos.y + playerH;
+	const int probeY1 = pos.y + playerH - 1;
 
 	const int x = probeX / tileSize;
-	const int y = probeY / tileSize;
+	const int y0 = probeY0 / tileSize;
+	const int y1 = probeY1 / tileSize;
 
-	if (x < 0 || x >= mapSize.x || y < 0 || y >= mapSize.y)
-		return false;
 
-	return map[y * mapSize.x + x] == stair;
+	return map[y0 * mapSize.x + x] == stair || map[y1 * mapSize.x + x] == stair;
 }
 
 glm::vec2 TileMap::getMapSize() const

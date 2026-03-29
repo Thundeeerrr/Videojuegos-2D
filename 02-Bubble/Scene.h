@@ -27,6 +27,7 @@ public:
 	void toggleGodMode();
 	void giveAllKeys();
 	void loadLevel(int levelNum);
+	void loadLevelFile(const std::string &levelPath); // Added back for clarity
 
 private:
 	void initShaders();

@@ -48,6 +48,7 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <Text Include="levels\KeyRoom.txt" />
     <Text Include="levels\level02.txt" />
     <Text Include="levels\level03.txt" />
     <Text Include="levels\level04.txt" />

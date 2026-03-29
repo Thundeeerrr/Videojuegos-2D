@@ -132,9 +132,6 @@ void Scene::giveAllKeys()
 
 void Scene::loadLevel(int levelNum)
 {
-   if(levelNum < 1)
-		return;
-
 	if(map != NULL)
 	{
 		delete map;
@@ -145,6 +142,14 @@ void Scene::loadLevel(int levelNum)
 		delete player;
 		player = NULL;
 	}
+
+	if(levelNum == 0)
+	{
+		init("levels/KeyRoom.txt");
+		return;
+	}
+	if(levelNum < 1)
+		return;
 
 	stringstream levelPath;
 	levelPath << "levels/level";

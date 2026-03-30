@@ -36,6 +36,7 @@ public:
 	bool collisionMoveRight(const glm::ivec2 &pos, const glm::ivec2 &size) const;
 	bool collisionMoveDown(const glm::ivec2 &pos, const glm::ivec2 &size, int *posY) const;
 	bool isStairTile(const glm::ivec2& pos) const;
+   bool isDoorTile(const glm::ivec2 &pos) const;
 	glm::vec2 getMapSize() const;
 	const vector<glm::ivec2> &getDoorPositions() const { return doorPositions; }
 	

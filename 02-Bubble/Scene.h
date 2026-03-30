@@ -27,12 +27,13 @@ public:
 	void toggleGodMode();
 	void giveAllKeys();
 	void loadLevel(int levelNum);
-	void loadLevelFile(const std::string &levelPath); // Added back for clarity
+ void loadLevelFile(const std::string &levelPath);
 	bool isGodMode() const;
 
 private:
 	void initShaders();
 	void freeDoors();
+	int findClosestDoorIndex(const glm::ivec2 &playerTilePos) const;
 
 private:
 	TileMap *map;
@@ -42,6 +43,10 @@ private:
 	float currentTime;
 	glm::mat4 projection;
 	bool dWasPressed;
+	bool hasDoorTarget;
+	glm::ivec2 doorTargetTilePos;
+	bool hasSpawnOverride;
+	glm::ivec2 spawnTileOverride;
 
 	bool godMode;
 };

@@ -15,6 +15,11 @@ enum PlayerAnims
 	STAND_LEFT, STAND_RIGHT, MOVE_LEFT, MOVE_RIGHT
 };
 
+namespace
+{
+	const int DOOR_ENTER_DURATION_MS = 1000;
+}
+
 
 Player::Player()
 {
@@ -34,6 +39,8 @@ void Player::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 {
 	health = 3;
 	bJumping = false;
+  doorState = DoorState::NONE;
+	doorTimer = 0;
 	spritesheet.loadFromFile("images/bub.png", TEXTURE_PIXEL_FORMAT_RGBA);
 	healthTexture.loadFromFile("images/heart.png", TEXTURE_PIXEL_FORMAT_RGBA);
 	sprite = Sprite::createSprite(glm::ivec2(16, 16), glm::vec2(0.25, 0.25), &spritesheet, &shaderProgram);
@@ -64,6 +71,15 @@ void Player::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 
 void Player::update(int deltaTime)
 {
+  if(doorState == DoorState::ENTERING)
+	{
+		doorTimer -= deltaTime;
+		if(doorTimer <= 0)
+			doorState = DoorState::ENTERED;
+		sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y)));
+		return;
+	}
+
 	sprite->update(deltaTime);
 	if(Game::instance().getKey(GLFW_KEY_LEFT))
 	{
@@ -115,6 +131,12 @@ void Player::update(int deltaTime)
 		posPlayer.y += FALL_STEP;
 		map->collisionMoveDown(posPlayer, glm::ivec2(16, 16), &posPlayer.y);
 	}
+
+	if(!isTouchingStair && Game::instance().getKey(GLFW_KEY_UP) && map->isDoorTile(posPlayer))
+	{
+		doorState = DoorState::ENTERING;
+		doorTimer = DOOR_ENTER_DURATION_MS;
+	}
 	
 	sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y)));
 }
@@ -145,6 +167,22 @@ void Player::setPosition(const glm::vec2 &pos)
 glm::vec2 Player::getPosition() const
 {
 	return glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y));
+}
+
+bool Player::isDoorInteractionStarted() const
+{
+	return doorState == DoorState::ENTERING;
+}
+
+bool Player::hasDoorTransitionEnded() const
+{
+	return doorState == DoorState::ENTERED;
+}
+
+void Player::resetDoorState()
+{
+	doorState = DoorState::NONE;
+	doorTimer = 0;
 }
 
 

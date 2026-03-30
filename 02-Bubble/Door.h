@@ -15,6 +15,9 @@ public:
 	void update(int deltaTime);
 	void render() const;
 	void toggleOpen();
+	void open();
+	bool getIsOpen() const { return isOpen; }
+	glm::ivec2 getTilePos() const { return tilePos; }
 
 private:
 	void updateUvs(float uvY0, float uvY1);

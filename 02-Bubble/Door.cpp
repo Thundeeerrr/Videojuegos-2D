@@ -90,6 +90,12 @@ void Door::toggleOpen()
 		updateUvs(0.5f, 1.f);
 }
 
+void Door::open()
+{
+	if(!isOpen)
+		toggleOpen();
+}
+
 void Door::updateUvs(float uvY0, float uvY1)
 {
 	float uvs[8] = {

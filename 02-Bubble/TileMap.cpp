@@ -262,6 +262,23 @@ bool TileMap::isStairTile(const glm::ivec2& pos) const
 	return map[y0 * mapSize.x + x] == stair || map[y1 * mapSize.x + x] == stair;
 }
 
+bool TileMap::isDoorTile(const glm::ivec2 &pos) const
+{
+	const int playerW = 16;
+	const int playerH = 16;
+
+	const int probeX = pos.x + playerW / 2;
+	const int probeY = pos.y + playerH - 1;
+
+	const int x = probeX / tileSize;
+	const int y = probeY / tileSize;
+
+	if(x < 0 || x >= mapSize.x || y < 0 || y >= mapSize.y)
+		return false;
+
+	return map[y * mapSize.x + x] == -1;
+}
+
 glm::vec2 TileMap::getMapSize() const
 {
 	return mapSize;

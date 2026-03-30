@@ -16,6 +16,8 @@ public:
 	Player();
 	~Player();
 
+	enum class DoorState { NONE, ENTERING, ENTERED };
+
 public:
 	void init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram);
 	void update(int deltaTime);
@@ -24,6 +26,9 @@ public:
 	void setTileMap(TileMap *tileMap);
 	void setPosition(const glm::vec2 &pos);
 	glm::vec2 getPosition() const;
+	bool isDoorInteractionStarted() const;
+	bool hasDoorTransitionEnded() const;
+	void resetDoorState();
 	
 private:
 	bool bJumping;
@@ -33,6 +38,8 @@ private:
 	Sprite *sprite, *healthSprite;
 	TileMap *map;
 	int health;
+  DoorState doorState;
+	int doorTimer;
 };
 
 

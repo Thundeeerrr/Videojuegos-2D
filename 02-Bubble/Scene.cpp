@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cmath>
 #include <sstream>
+#include <limits>
 #include <glm/gtc/matrix_transform.hpp>
 #include "Scene.h"
 #include "Game.h"
@@ -17,7 +18,12 @@ Scene::Scene()
 {
 	map = NULL;
 	player = NULL;
-   dWasPressed = false;
+ dWasPressed = false;
+	hasDoorTarget = false;
+	hasSpawnOverride = false;
+	doorTargetTilePos = glm::ivec2(0);
+	spawnTileOverride = glm::ivec2(0);
+	godMode = false;
 }
 
 Scene::~Scene()
@@ -34,9 +40,9 @@ Scene::~Scene()
 void Scene::init(const std::string &sceneName)
 {
 	initShaders();
- freeDoors();
+   freeDoors();
 	map = TileMap::createTileMap(sceneName, glm::vec2(SCREEN_X, SCREEN_Y), texProgram);
-    const std::vector<glm::ivec2> &doorPositions = map->getDoorPositions();
+ const std::vector<glm::ivec2> &doorPositions = map->getDoorPositions();
 	for(int i=0; i<int(doorPositions.size()); ++i)
 	{
 		Door *door = new Door();
@@ -45,12 +51,25 @@ void Scene::init(const std::string &sceneName)
 	}
 	player = new Player();
 	player->init(glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
-	player->setPosition(glm::vec2(INIT_PLAYER_X_TILES * map->getTileSize(), INIT_PLAYER_Y_TILES * map->getTileSize()));
+ glm::ivec2 spawnTile(INIT_PLAYER_X_TILES, INIT_PLAYER_Y_TILES);
+	if(hasSpawnOverride)
+	{
+		spawnTile = spawnTileOverride;
+		const int maxX = int(map->getMapSize().x) - 1;
+		const int maxY = int(map->getMapSize().y) - 1;
+		if(spawnTile.x < 0) spawnTile.x = 0;
+		if(spawnTile.y < 0) spawnTile.y = 0;
+		if(spawnTile.x > maxX) spawnTile.x = maxX;
+		if(spawnTile.y > maxY) spawnTile.y = maxY;
+		hasSpawnOverride = false;
+	}
+	player->setPosition(glm::vec2(spawnTile.x * map->getTileSize(), spawnTile.y * map->getTileSize()));
 	player->setTileMap(map);
 	projection = glm::ortho(0.f, float(map->getMapSize().x * map->getTileSize()), float(map->getMapSize().y * map->getTileSize()), 0.f);
 	//projection = glm::ortho(0.f, float(SCREEN_WIDTH), float(SCREEN_HEIGHT), 0.f);
 	currentTime = 0.0f;
-   dWasPressed = false;
+ dWasPressed = false;
+	hasDoorTarget = false;
 }
 
 void Scene::update(int deltaTime)
@@ -67,6 +86,34 @@ void Scene::update(int deltaTime)
 	for(int i=0; i<int(doors.size()); ++i)
 		doors[i]->update(deltaTime);
 	player->update(deltaTime);
+
+	if(player->isDoorInteractionStarted())
+	{
+		glm::vec2 playerPos = player->getPosition();
+		glm::ivec2 playerTilePos(
+			(int(playerPos.x) + 8) / map->getTileSize(),
+			(int(playerPos.y) + 15) / map->getTileSize());
+
+		int doorIdx = findClosestDoorIndex(playerTilePos);
+		if(doorIdx >= 0)
+		{
+			doors[doorIdx]->open();
+			hasDoorTarget = true;
+			doorTargetTilePos = doors[doorIdx]->getTilePos();
+		}
+	}
+
+	if(player->hasDoorTransitionEnded())
+	{
+		player->resetDoorState();
+		if(hasDoorTarget)
+		{
+			hasSpawnOverride = true;
+			spawnTileOverride = doorTargetTilePos;
+		}
+		loadLevel(0);
+		return;
+	}
 }
 
 void Scene::render()
@@ -159,6 +206,40 @@ void Scene::loadLevel(int levelNum)
 	levelPath << levelNum << ".txt";
 
 	init(levelPath.str());
+}
+
+void Scene::loadLevelFile(const std::string &levelPath)
+{
+	if(map != NULL)
+	{
+		delete map;
+		map = NULL;
+	}
+	if(player != NULL)
+	{
+		delete player;
+		player = NULL;
+	}
+
+	init(levelPath);
+}
+
+int Scene::findClosestDoorIndex(const glm::ivec2 &playerTilePos) const
+{
+	int closestIdx = -1;
+	int closestDist = std::numeric_limits<int>::max();
+	for(int i=0; i<int(doors.size()); ++i)
+	{
+		glm::ivec2 doorTile = doors[i]->getTilePos();
+		int dist = abs(doorTile.x - playerTilePos.x) + abs(doorTile.y - playerTilePos.y);
+		if(dist < closestDist)
+		{
+			closestDist = dist;
+			closestIdx = i;
+		}
+	}
+
+	return closestIdx;
 }
 
 bool Scene::isGodMode() const

@@ -4,6 +4,7 @@
 
 #include <glm/glm.hpp>
 #include <vector>
+#include <map>
 #include "ShaderProgram.h"
 #include "TileMap.h"
 #include "Player.h"
@@ -52,6 +53,7 @@ private:
 	bool hasReturnPoint;
 	int returnLevelNum;
 	glm::ivec2 returnTilePos;
+	std::map<int, std::vector<glm::ivec2> > openedDoorsByLevel;
 
 	bool godMode;
 };

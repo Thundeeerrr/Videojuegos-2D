@@ -13,6 +13,20 @@
 #define INIT_PLAYER_X_TILES 9
 #define INIT_PLAYER_Y_TILES 4
 
+namespace
+{
+	bool containsDoorTile(const std::vector<glm::ivec2> &tiles, const glm::ivec2 &tile)
+	{
+		for(int i=0; i<int(tiles.size()); ++i)
+		{
+			if(tiles[i] == tile)
+				return true;
+		}
+
+		return false;
+	}
+}
+
 
 Scene::Scene()
 {
@@ -57,6 +71,7 @@ void Scene::init(const std::string &sceneName)
 	player = new Player();
 	player->init(glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
     bool shouldPlayDoorExitAnimation = false;
+    bool shouldKeepSpawnDoorOpen = false;
  glm::ivec2 spawnTile(INIT_PLAYER_X_TILES, INIT_PLAYER_Y_TILES);
     if(spawnAtDoorInLoadedLevel && !doorPositions.empty())
 	{
@@ -74,8 +89,39 @@ void Scene::init(const std::string &sceneName)
 		if(spawnTile.x > maxX) spawnTile.x = maxX;
 		if(spawnTile.y > maxY) spawnTile.y = maxY;
        shouldPlayDoorExitAnimation = true;
+       shouldKeepSpawnDoorOpen = true;
 		hasSpawnOverride = false;
 	}
+
+	if(currentLevelNum == 0)
+	{
+		for(int i=0; i<int(doors.size()); ++i)
+			doors[i]->open();
+	}
+    else
+	{
+		std::map<int, std::vector<glm::ivec2> >::const_iterator it = openedDoorsByLevel.find(currentLevelNum);
+		if(it != openedDoorsByLevel.end())
+		{
+			for(int i=0; i<int(doors.size()); ++i)
+			{
+				if(containsDoorTile(it->second, doors[i]->getTilePos()))
+					doors[i]->open();
+			}
+		}
+	}
+    if(shouldKeepSpawnDoorOpen)
+	{
+		for(int i=0; i<int(doors.size()); ++i)
+		{
+			if(doors[i]->getTilePos() == spawnTile)
+			{
+				doors[i]->open();
+				break;
+			}
+		}
+	}
+
 	player->setPosition(glm::vec2(spawnTile.x * map->getTileSize(), spawnTile.y * map->getTileSize()));
 	player->setTileMap(map);
     if(shouldPlayDoorExitAnimation)
@@ -113,6 +159,13 @@ void Scene::update(int deltaTime)
 		if(doorIdx >= 0)
 		{
 			doors[doorIdx]->open();
+           if(currentLevelNum != 0)
+			{
+				std::vector<glm::ivec2> &openedDoors = openedDoorsByLevel[currentLevelNum];
+				const glm::ivec2 openedDoorPos = doors[doorIdx]->getTilePos();
+				if(!containsDoorTile(openedDoors, openedDoorPos))
+					openedDoors.push_back(openedDoorPos);
+			}
 			hasDoorTarget = true;
 			doorTargetTilePos = doors[doorIdx]->getTilePos();
            if(currentLevelNum != 0)

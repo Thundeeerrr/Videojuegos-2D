@@ -13,12 +13,21 @@
 
 enum PlayerAnims
 {
-	STAND_LEFT, STAND_RIGHT, MOVE_LEFT, MOVE_RIGHT
+  STAND_LEFT, STAND_RIGHT, MOVE_LEFT, MOVE_RIGHT, DOOR_ENTER, DOOR_EXIT, PLANT_CLIMB_UP, PLANT_CLIMB_DOWN
 };
 
 namespace
 {
-	const int DOOR_ENTER_DURATION_MS = 1000;
+    const int DOOR_ANIM_DURATION_MS = 750;
+    const int DOOR_ENTER_ROW = 2;
+	const int DOOR_ENTER_COL_A = 0;
+	const int DOOR_ENTER_COL_B = 1;
+   const int DOOR_EXIT_ROW = 2;
+	const int DOOR_EXIT_COL_A = 2;
+	const int DOOR_EXIT_COL_B = 3;
+   const int PLANT_CLIMB_ROW = 7;
+   const int PLANT_CLIMB_COL = 0;
+   const int PLANT_CLIMB_COL_B = 1;
     const float PLAYER_FRAME_WIDTH_PX = 14.f;
 	const float PLAYER_COLLISION_HEIGHT_PX = 16.f;
 	const float PLAYER_SPRITE_HEIGHT_PX = 24.f;
@@ -48,17 +57,16 @@ void Player::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
   doorState = DoorState::NONE;
 	doorTimer = 0;
 	//spritesheet.loadFromFile("images/bub.png", TEXTURE_PIXEL_FORMAT_RGBA);
-	spritesheet.loadFromFile("images/bbunny-sprites.png", TEXTURE_PIXEL_FORMAT_RGBA);
+	spritesheet.loadFromFile("images/BugsBunny-Sprites.png", TEXTURE_PIXEL_FORMAT_RGBA);
 	healthTexture.loadFromFile("images/heart.png", TEXTURE_PIXEL_FORMAT_RGBA);
 	//sprite = Sprite::createSprite(glm::ivec2(16, 16), glm::vec2(0.25, 0.25), &spritesheet, &shaderProgram);
-	sprite = Sprite::createSprite(glm::ivec2(14, 24),
-		glm::vec2(14.f / 263.f, 24.f / 174.f),
+	sprite = Sprite::createSprite(glm::ivec2(16, 24),
+		glm::vec2(1.f / 8.f, 1.f / 12.f),
 		&spritesheet, &shaderProgram);
 	healthSprite = Sprite::createSprite(glm::ivec2(16, 16), glm::vec2(1.0, 1.0), &healthTexture, &shaderProgram);
-	#define OFFSET_X 7.f
-	#define UV(col, row) glm::vec2((col * 14.f + OFFSET_X) / 263.f, (row) * 24.f/174.f)
+	#define UV(col, row) glm::vec2((col) / 8.f, (row) / 12.f)
 
-	sprite->setNumberAnimations(4);
+ sprite->setNumberAnimations(8);
 	
 		/*sprite->setAnimationSpeed(STAND_LEFT, 8);
 		sprite->addKeyframe(STAND_LEFT, glm::vec2(0.f, 0.f));
@@ -77,23 +85,39 @@ void Player::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 		sprite->addKeyframe(MOVE_RIGHT, glm::vec2(0.25, 0.5f));*/
 
 	sprite->setAnimationSpeed(STAND_LEFT, 8);
-	sprite->addKeyframe(STAND_LEFT, UV(4, 0));
+	sprite->addKeyframe(STAND_LEFT, UV(0, 0));
 
 	sprite->setAnimationSpeed(STAND_RIGHT, 8);
-	sprite->addKeyframe(STAND_RIGHT, UV(4, 0));
+	sprite->addKeyframe(STAND_RIGHT, UV(0, 0));
 
 	// Walk: cols 3, 2, 1, 0 en orden
 	sprite->setAnimationSpeed(MOVE_LEFT, 8);
-	sprite->addKeyframe(MOVE_LEFT, UV(3, 0));
-	sprite->addKeyframe(MOVE_LEFT, UV(2, 0));
 	sprite->addKeyframe(MOVE_LEFT, UV(1, 0));
-	sprite->addKeyframe(MOVE_LEFT, UV(0, 0));
+	sprite->addKeyframe(MOVE_LEFT, UV(2, 0));
+	sprite->addKeyframe(MOVE_LEFT, UV(3, 0));
+	sprite->addKeyframe(MOVE_LEFT, UV(4, 0));
 
 	sprite->setAnimationSpeed(MOVE_RIGHT, 8);
-	sprite->addKeyframe(MOVE_RIGHT, UV(3, 0));
-	sprite->addKeyframe(MOVE_RIGHT, UV(2, 0));
 	sprite->addKeyframe(MOVE_RIGHT, UV(1, 0));
-	sprite->addKeyframe(MOVE_RIGHT, UV(0, 0));
+	sprite->addKeyframe(MOVE_RIGHT, UV(2, 0));
+	sprite->addKeyframe(MOVE_RIGHT, UV(3, 0));
+	sprite->addKeyframe(MOVE_RIGHT, UV(4, 0));
+
+	sprite->setAnimationSpeed(DOOR_ENTER, 10);
+	sprite->addKeyframe(DOOR_ENTER, UV(DOOR_ENTER_COL_A, DOOR_ENTER_ROW));
+	sprite->addKeyframe(DOOR_ENTER, UV(DOOR_ENTER_COL_B, DOOR_ENTER_ROW));
+
+	sprite->setAnimationSpeed(DOOR_EXIT, 10);
+	sprite->addKeyframe(DOOR_EXIT, UV(DOOR_EXIT_COL_A, DOOR_EXIT_ROW));
+	sprite->addKeyframe(DOOR_EXIT, UV(DOOR_EXIT_COL_B, DOOR_EXIT_ROW));
+
+	sprite->setAnimationSpeed(PLANT_CLIMB_UP, 8);
+	sprite->addKeyframe(PLANT_CLIMB_UP, UV(PLANT_CLIMB_COL, PLANT_CLIMB_ROW));
+	sprite->addKeyframe(PLANT_CLIMB_UP, UV(PLANT_CLIMB_COL_B, PLANT_CLIMB_ROW));
+
+	sprite->setAnimationSpeed(PLANT_CLIMB_DOWN, 8);
+    sprite->addKeyframe(PLANT_CLIMB_DOWN, UV(PLANT_CLIMB_COL_B, PLANT_CLIMB_ROW));
+	sprite->addKeyframe(PLANT_CLIMB_DOWN, UV(PLANT_CLIMB_COL, PLANT_CLIMB_ROW));
 		
 	sprite->changeAnimation(0);
 	tileMapDispl = tileMapPos;
@@ -103,14 +127,35 @@ void Player::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 
 void Player::update(int deltaTime)
 {
-  if(doorState == DoorState::ENTERING)
+  if(doorState == DoorState::ENTERING || doorState == DoorState::LEAVING)
 	{
+     sprite->setAnimationPaused(false);
+     sprite->update(deltaTime);
+		int doorAnim = (doorState == DoorState::ENTERING) ? DOOR_ENTER : DOOR_EXIT;
+		if(sprite->animation() != doorAnim)
+			sprite->changeAnimation(doorAnim);
+
 		doorTimer -= deltaTime;
 		if(doorTimer <= 0)
-			doorState = DoorState::ENTERED;
+     {
+			if(doorState == DoorState::ENTERING)
+				doorState = DoorState::ENTERED;
+			else
+			{
+				doorState = DoorState::NONE;
+				facingRight = true;
+				sprite->changeAnimation(STAND_RIGHT);
+			}
+		}
        sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y) + PLAYER_VISUAL_OFFSET_Y_PX));
 		return;
 	}
+
+  bool upPressed = Game::instance().getKey(GLFW_KEY_UP);
+	bool downPressed = Game::instance().getKey(GLFW_KEY_DOWN);
+	bool isTouchingStair = map->isStairTile(posPlayer);
+	bool isClimbAnim = (sprite->animation() == PLANT_CLIMB_UP || sprite->animation() == PLANT_CLIMB_DOWN);
+	sprite->setAnimationPaused(isTouchingStair && !upPressed && !downPressed && isClimbAnim);
 
 	sprite->update(deltaTime);
 	if(Game::instance().getKey(GLFW_KEY_LEFT))
@@ -143,19 +188,24 @@ void Player::update(int deltaTime)
 			sprite->changeAnimation(STAND_LEFT);
 		else if(sprite->animation() == MOVE_RIGHT)
 			sprite->changeAnimation(STAND_RIGHT);
+       else if(sprite->animation() == DOOR_ENTER || sprite->animation() == DOOR_EXIT)
+			sprite->changeAnimation(STAND_RIGHT);
 	}
 	
-	bool isTouchingStair = map->isStairTile(posPlayer);
 	if (isTouchingStair)
 	{
 		if (Game::instance().getKey(GLFW_KEY_SPACE))	cout << "Player is touching a stair tile and space is pressed." << endl;
-		if (Game::instance().getKey(GLFW_KEY_UP))	
+        if (upPressed)	
 		{
+           if(sprite->animation() != PLANT_CLIMB_UP)
+				sprite->changeAnimation(PLANT_CLIMB_UP);
 			posPlayer.y -= 2;
 			if (!map->isStairTile(posPlayer))	posPlayer.y += 2;
 		}
-		if (Game::instance().getKey(GLFW_KEY_DOWN))	
+        if (downPressed)	
 		{
+           if(sprite->animation() != PLANT_CLIMB_DOWN)
+				sprite->changeAnimation(PLANT_CLIMB_DOWN);
 			posPlayer.y += 2;
 			map->collisionMoveDown(posPlayer, glm::ivec2(16, 16), &posPlayer.y);
 		}
@@ -166,10 +216,11 @@ void Player::update(int deltaTime)
 		map->collisionMoveDown(posPlayer, glm::ivec2(16, 16), &posPlayer.y);
 	}
 
-	if(!isTouchingStair && Game::instance().getKey(GLFW_KEY_UP) && map->isDoorTile(posPlayer))
+  if(!isTouchingStair && upPressed && map->isDoorTile(posPlayer))
 	{
 		doorState = DoorState::ENTERING;
-		doorTimer = DOOR_ENTER_DURATION_MS;
+     doorTimer = DOOR_ANIM_DURATION_MS;
+       sprite->changeAnimation(DOOR_ENTER);
 	}
 	
    sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y) + PLAYER_VISUAL_OFFSET_Y_PX));
@@ -177,7 +228,7 @@ void Player::update(int deltaTime)
 
 void Player::render()
 {
-  if(facingRight)
+  if(!facingRight)
 	{
 		glm::mat4 local = glm::translate(glm::mat4(1.0f), glm::vec3(PLAYER_FRAME_WIDTH_PX, 0.f, 0.f));
 		local = glm::scale(local, glm::vec3(-1.f, 1.f, 1.f));
@@ -226,6 +277,13 @@ void Player::resetDoorState()
 {
 	doorState = DoorState::NONE;
 	doorTimer = 0;
+}
+
+void Player::startDoorExitAnimation()
+{
+	doorState = DoorState::LEAVING;
+ doorTimer = DOOR_ANIM_DURATION_MS;
+	sprite->changeAnimation(DOOR_EXIT);
 }
 
 

@@ -33,6 +33,7 @@ Sprite::Sprite(const glm::vec2 &quadSize, const glm::vec2 &sizeInSpritesheet, Te
 	currentAnimation = -1;
 	position = glm::vec2(0.f);
    localTransform = glm::mat4(1.0f);
+   animationPaused = false;
 }
 
 Sprite::~Sprite()
@@ -45,11 +46,14 @@ void Sprite::update(int deltaTime)
 {
 	if(currentAnimation >= 0)
 	{
-		timeAnimation += deltaTime;
-		while(timeAnimation > animations[currentAnimation].millisecsPerKeyframe)
+     if(!animationPaused)
 		{
-			timeAnimation -= animations[currentAnimation].millisecsPerKeyframe;
-			currentKeyframe = (currentKeyframe + 1) % animations[currentAnimation].keyframeDispl.size();
+         timeAnimation += deltaTime;
+			while(timeAnimation > animations[currentAnimation].millisecsPerKeyframe)
+			{
+				timeAnimation -= animations[currentAnimation].millisecsPerKeyframe;
+				currentKeyframe = (currentKeyframe + 1) % animations[currentAnimation].keyframeDispl.size();
+			}
 		}
 		texCoordDispl = animations[currentAnimation].keyframeDispl[currentKeyframe];
 	}
@@ -116,6 +120,11 @@ void Sprite::setPosition(const glm::vec2 &pos)
 void Sprite::setLocalTransform(const glm::mat4 &transform)
 {
 	localTransform = transform;
+}
+
+void Sprite::setAnimationPaused(bool paused)
+{
+	animationPaused = paused;
 }
 
 

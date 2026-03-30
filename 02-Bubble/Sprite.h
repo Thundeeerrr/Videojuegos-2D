@@ -36,6 +36,7 @@ public:
 	
 	void setPosition(const glm::vec2 &pos);
 	void setLocalTransform(const glm::mat4 &transform);
+	void setAnimationPaused(bool paused);
 
 private:
 	Texture *texture;
@@ -47,6 +48,7 @@ private:
   glm::mat4 localTransform;
 	int currentAnimation, currentKeyframe;
 	float timeAnimation;
+    bool animationPaused;
 	glm::vec2 texCoordDispl;
 	vector<AnimKeyframes> animations;
 

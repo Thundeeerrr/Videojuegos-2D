@@ -56,10 +56,12 @@ void Scene::init(const std::string &sceneName)
 	}
 	player = new Player();
 	player->init(glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
+    bool shouldPlayDoorExitAnimation = false;
  glm::ivec2 spawnTile(INIT_PLAYER_X_TILES, INIT_PLAYER_Y_TILES);
     if(spawnAtDoorInLoadedLevel && !doorPositions.empty())
 	{
 		spawnTile = doorPositions[0];
+       shouldPlayDoorExitAnimation = true;
 	}
     spawnAtDoorInLoadedLevel = false;
 	if(hasSpawnOverride)
@@ -71,10 +73,13 @@ void Scene::init(const std::string &sceneName)
 		if(spawnTile.y < 0) spawnTile.y = 0;
 		if(spawnTile.x > maxX) spawnTile.x = maxX;
 		if(spawnTile.y > maxY) spawnTile.y = maxY;
+       shouldPlayDoorExitAnimation = true;
 		hasSpawnOverride = false;
 	}
 	player->setPosition(glm::vec2(spawnTile.x * map->getTileSize(), spawnTile.y * map->getTileSize()));
 	player->setTileMap(map);
+    if(shouldPlayDoorExitAnimation)
+		player->startDoorExitAnimation();
 	projection = glm::ortho(0.f, float(map->getMapSize().x * map->getTileSize()), float(map->getMapSize().y * map->getTileSize()), 0.f);
 	//projection = glm::ortho(0.f, float(SCREEN_WIDTH), float(SCREEN_HEIGHT), 0.f);
 	currentTime = 0.0f;

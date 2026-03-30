@@ -16,7 +16,7 @@ public:
 	Player();
 	~Player();
 
-	enum class DoorState { NONE, ENTERING, ENTERED };
+   enum class DoorState { NONE, ENTERING, ENTERED, LEAVING };
 
 public:
 	void init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram);
@@ -28,6 +28,7 @@ public:
 	glm::vec2 getPosition() const;
 	bool isDoorInteractionStarted() const;
 	bool hasDoorTransitionEnded() const;
+  void startDoorExitAnimation();
 	void resetDoorState();
 	
 private:

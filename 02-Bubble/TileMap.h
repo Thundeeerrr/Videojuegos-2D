@@ -17,6 +17,7 @@
 
 class TileMap
 {
+	struct TubePair { glm::ivec2 entry; glm::ivec2 exit; };
 
 private:
 	TileMap(const string &levelFile, const glm::vec2 &minCoords, ShaderProgram &program);
@@ -37,6 +38,11 @@ public:
 	bool collisionMoveDown(const glm::ivec2 &pos, const glm::ivec2 &size, int *posY) const;
 	bool isStairTile(const glm::ivec2& pos) const;
    bool isDoorTile(const glm::ivec2 &pos) const;
+   bool isTubeTile(const glm::ivec2 &pos, bool topVariant) const;
+	glm::ivec2 getTubeExit(const glm::ivec2 &entryTile) const;
+  bool isTubeBottomTile(const glm::ivec2 &tilePos) const;
+	glm::ivec2 worldToTile(const glm::vec2 &worldPos) const { return glm::ivec2(int(worldPos.x) / tileSize, int(worldPos.y) / tileSize); }
+	glm::vec2 tileToWorld(const glm::ivec2 &tilePos) const { return glm::vec2(tilePos.x * tileSize, tilePos.y * tileSize); }
 	glm::vec2 getMapSize() const;
 	const vector<glm::ivec2> &getDoorPositions() const { return doorPositions; }
 	
@@ -56,6 +62,7 @@ private:
 	int *map;
 	set<int> collidedTiles;
   vector<glm::ivec2> doorPositions;
+  vector<TubePair> tubeConnections;
 	int stair;
 };
 

@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <algorithm>
 #include <vector>
 #include "TileMap.h"
 #include "Game.h"
@@ -10,6 +11,12 @@ using namespace std;
 namespace
 {
 	const int TILE_DOOR = 999;
+   const int TILE_TUBE_A_TOP = 998;
+	const int TILE_TUBE_A_BOTTOM = 997;
+	const int TILE_TUBE_B_TOP = 996;
+	const int TILE_TUBE_B_BOTTOM = 995;
+    const int TILE_TUBE_TOP_RENDER = 55;
+	const int TILE_TUBE_BOTTOM_RENDER = 135;
 }
 
 
@@ -87,6 +94,11 @@ bool TileMap::loadLevel(const string &levelFile)
 	// Read the collided tiles, first read the quantity of collided tiles and then the tile ids. Clear the set of collided tiles before reading them in case of changing levels.
 	collidedTiles.clear();
  doorPositions.clear();
+	tubeConnections.clear();
+    vector<glm::ivec2> tubeATopTiles;
+	vector<glm::ivec2> tubeABottomTiles;
+	vector<glm::ivec2> tubeBTopTiles;
+	vector<glm::ivec2> tubeBBottomTiles;
 	getline(fin, line);
 	sstream.clear();
 	sstream.str(line);
@@ -117,9 +129,47 @@ bool TileMap::loadLevel(const string &levelFile)
 				doorPositions.push_back(glm::ivec2(i, j));
 				map[j * mapSize.x + i] = -1;
 			}
+            else if(tileId == TILE_TUBE_A_TOP)
+			{
+               tubeATopTiles.push_back(glm::ivec2(i, j));
+				map[j * mapSize.x + i] = -2;
+			}
+         else if(tileId == TILE_TUBE_A_BOTTOM)
+			{
+                tubeABottomTiles.push_back(glm::ivec2(i, j));
+				map[j * mapSize.x + i] = -2;
+			}
+			else if(tileId == TILE_TUBE_B_TOP)
+			{
+				tubeBTopTiles.push_back(glm::ivec2(i, j));
+				map[j * mapSize.x + i] = -2;
+			}
+			else if(tileId == TILE_TUBE_B_BOTTOM)
+			{
+				tubeBBottomTiles.push_back(glm::ivec2(i, j));
+				map[j * mapSize.x + i] = -2;
+			}
 			else
 				map[j * mapSize.x + i] = tileId;
 		}
+	}
+
+   int pairedTubeCountA = min(int(tubeATopTiles.size()), int(tubeABottomTiles.size()));
+	for(int i = 0; i < pairedTubeCountA; ++i)
+	{
+		TubePair pair;
+       pair.entry = tubeATopTiles[i];
+		pair.exit = tubeABottomTiles[i];
+		tubeConnections.push_back(pair);
+	}
+
+	int pairedTubeCountB = min(int(tubeBTopTiles.size()), int(tubeBBottomTiles.size()));
+	for(int i = 0; i < pairedTubeCountB; ++i)
+	{
+		TubePair pair;
+		pair.entry = tubeBTopTiles[i];
+		pair.exit = tubeBBottomTiles[i];
+		tubeConnections.push_back(pair);
 	}
 	fin.close();
 	
@@ -139,12 +189,30 @@ void TileMap::prepareArrays(const glm::vec2 &minCoords, ShaderProgram &program)
 		for(int i=0; i<mapSize.x; i++)
 		{
 			tile = map[j * mapSize.x + i];
-           if(tile < 0)
+         int tileToRender = tile;
+			if(tile == -2)
+			{
+				glm::ivec2 tilePos(i, j);
+				for(int k = 0; k < int(tubeConnections.size()); ++k)
+				{
+					if(tubeConnections[k].entry == tilePos)
+					{
+						tileToRender = TILE_TUBE_TOP_RENDER;
+						break;
+					}
+					if(tubeConnections[k].exit == tilePos)
+					{
+						tileToRender = TILE_TUBE_BOTTOM_RENDER;
+						break;
+					}
+				}
+			}
+		   if(tileToRender < 0)
 				continue;
 			// Non-empty tile
 			nTiles++;
 			posTile = glm::vec2(minCoords.x + i * tileSize, minCoords.y + j * tileSize);
-          texCoordTile[0] = glm::vec2(float((tile)%tilesheetSize.x) / tilesheetSize.x, float((tile)/tilesheetSize.x) / tilesheetSize.y);
+            texCoordTile[0] = glm::vec2(float((tileToRender)%tilesheetSize.x) / tilesheetSize.x, float((tileToRender)/tilesheetSize.x) / tilesheetSize.y);
 			texCoordTile[1] = texCoordTile[0] + tileTexSize;
 			//texCoordTile[0] += halfTexel;
 			texCoordTile[1] -= halfTexel;
@@ -229,7 +297,7 @@ bool TileMap::collisionMoveDown(const glm::ivec2 &pos, const glm::ivec2 &size, i
 	{
 		int tile = map[y * mapSize.x + x];
 		if (tryToClimbDown) cout << "Trying to climb down. Checking tile at (" << x << ", " << y << ") with tile ID: " << tile << endl;
-		if(collidedTiles.find(tile) != collidedTiles.end())
+     if(collidedTiles.find(tile) != collidedTiles.end() || tile == -2)
 		{
 			if (*posY - tileSize * y + size.y <= 4)
 			{
@@ -277,6 +345,92 @@ bool TileMap::isDoorTile(const glm::ivec2 &pos) const
 		return false;
 
 	return map[y * mapSize.x + x] == -1;
+}
+
+bool TileMap::isTubeTile(const glm::ivec2 &pos, bool topVariant) const
+{
+	const int playerW = 16;
+	const int playerH = 16;
+	const int tubeProbeExtraYPx = 8;
+
+	const int probeX = pos.x + playerW / 2;
+ const int probeY0 = pos.y + playerH;
+	const int probeY1 = pos.y + playerH - 1;
+	const int probeY2 = pos.y + playerH + tubeProbeExtraYPx;
+	const int probeY3 = pos.y + playerH + tubeProbeExtraYPx - 1;
+
+	const int x = probeX / tileSize;
+    const int y0 = probeY0 / tileSize;
+	const int y1 = probeY1 / tileSize;
+	const int y2 = probeY2 / tileSize;
+	const int y3 = probeY3 / tileSize;
+
+  if(x < 0 || x >= mapSize.x)
+		return false;
+
+    auto isDesiredTubeVariant = [&](const glm::ivec2 &tilePos) -> bool
+	{
+		for(int i = 0; i < int(tubeConnections.size()); ++i)
+		{
+			if(topVariant && tubeConnections[i].entry == tilePos)
+				return true;
+			if(!topVariant && tubeConnections[i].exit == tilePos)
+				return true;
+		}
+		return false;
+	};
+
+	if(y0 >= 0 && y0 < mapSize.y)
+	{
+		if(map[y0 * mapSize.x + x] == -2 && isDesiredTubeVariant(glm::ivec2(x, y0)))
+			return true;
+	}
+
+	if(y1 >= 0 && y1 < mapSize.y)
+	{
+		if(map[y1 * mapSize.x + x] == -2 && isDesiredTubeVariant(glm::ivec2(x, y1)))
+			return true;
+	}
+
+	if(y2 >= 0 && y2 < mapSize.y)
+	{
+		if(map[y2 * mapSize.x + x] == -2 && isDesiredTubeVariant(glm::ivec2(x, y2)))
+			return true;
+	}
+
+	if(y3 >= 0 && y3 < mapSize.y)
+	{
+		if(map[y3 * mapSize.x + x] == -2 && isDesiredTubeVariant(glm::ivec2(x, y3)))
+			return true;
+	}
+
+	return false;
+}
+
+glm::ivec2 TileMap::getTubeExit(const glm::ivec2 &entryTile) const
+{
+	for(int i = 0; i < int(tubeConnections.size()); ++i)
+	{
+		if(tubeConnections[i].entry == entryTile)
+			return tubeConnections[i].exit;
+		if(tubeConnections[i].exit == entryTile)
+			return tubeConnections[i].entry;
+	}
+
+	return entryTile;
+}
+
+bool TileMap::isTubeBottomTile(const glm::ivec2 &tilePos) const
+{
+	for(int i = 0; i < int(tubeConnections.size()); ++i)
+	{
+		if(tubeConnections[i].exit == tilePos)
+			return true;
+		if(tubeConnections[i].entry == tilePos)
+			return false;
+	}
+
+	return false;
 }
 
 glm::vec2 TileMap::getMapSize() const

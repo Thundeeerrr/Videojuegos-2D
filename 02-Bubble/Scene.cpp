@@ -15,6 +15,9 @@
 
 namespace
 {
+ const int PLAYER_CENTER_OFFSET_X_PX = 8;
+	const int PLAYER_COLLISION_HEIGHT_PX = 16;
+
 	bool containsDoorTile(const std::vector<glm::ivec2> &tiles, const glm::ivec2 &tile)
 	{
 		for(int i=0; i<int(tiles.size()); ++i)
@@ -147,6 +150,31 @@ void Scene::update(int deltaTime)
 	for(int i=0; i<int(doors.size()); ++i)
 		doors[i]->update(deltaTime);
 	player->update(deltaTime);
+
+	if(player->isTubeTraveling())
+	{
+		glm::vec2 playerPos = player->getPosition();
+     glm::ivec2 playerTile = map->worldToTile(playerPos + glm::vec2(float(PLAYER_CENTER_OFFSET_X_PX), float(PLAYER_COLLISION_HEIGHT_PX)));
+		glm::ivec2 exitTile = map->getTubeExit(playerTile);
+       cout << "[TubeDebug] Scene travel: playerPos=(" << playerPos.x << "," << playerPos.y << ") playerTile=(" << playerTile.x << "," << playerTile.y << ") exitTile=(" << exitTile.x << "," << exitTile.y << ")" << endl;
+		glm::vec2 exitWorld = map->tileToWorld(exitTile);
+       bool exitFromTop = map->isTubeBottomTile(exitTile);
+       glm::vec2 exitFinalWorld;
+		if(exitFromTop)
+			exitFinalWorld = exitWorld + glm::vec2(0.f, float(PLAYER_COLLISION_HEIGHT_PX));
+		else
+			exitFinalWorld = exitWorld - glm::vec2(0.f, float(PLAYER_COLLISION_HEIGHT_PX));
+		player->setTubeExitPos(glm::ivec2(int(exitFinalWorld.x), int(exitFinalWorld.y)));
+        player->setTubeExitFromTop(exitFromTop);
+		player->startTubeExit();
+      if(exitFromTop)
+            player->setPosition(exitFinalWorld - glm::vec2(0.f, float(PLAYER_COLLISION_HEIGHT_PX)));
+		else
+            player->setPosition(exitFinalWorld + glm::vec2(0.f, float(PLAYER_COLLISION_HEIGHT_PX)));
+	}
+
+	if(player->isTubeDone())
+		player->resetTubeState();
 
 	if(player->isDoorInteractionStarted())
 	{

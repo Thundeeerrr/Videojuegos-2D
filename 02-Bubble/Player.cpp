@@ -56,6 +56,11 @@ void Player::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 	facingRight = true;
   doorState = DoorState::NONE;
 	doorTimer = 0;
+    tubeState = TubeState::NONE;
+	tubeTimer = 0;
+	tubeExitPos = glm::ivec2(0);
+    tubeExitFromTop = false;
+    tubeInputLocked = false;
 	//spritesheet.loadFromFile("images/bub.png", TEXTURE_PIXEL_FORMAT_RGBA);
 	spritesheet.loadFromFile("images/BugsBunny-Sprites.png", TEXTURE_PIXEL_FORMAT_RGBA);
 	healthTexture.loadFromFile("images/heart.png", TEXTURE_PIXEL_FORMAT_RGBA);
@@ -127,6 +132,60 @@ void Player::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 
 void Player::update(int deltaTime)
 {
+   if(tubeState == TubeState::ENTERING)
+	{
+		if(sprite->animation() != (facingRight ? STAND_RIGHT : STAND_LEFT))
+			sprite->changeAnimation(facingRight ? STAND_RIGHT : STAND_LEFT);
+		sprite->setAnimationPaused(false);
+		sprite->update(deltaTime);
+		tubeTimer -= deltaTime;
+		if(tubeTimer <= 0)
+			tubeState = TubeState::TRAVELING;
+		sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y) + PLAYER_VISUAL_OFFSET_Y_PX));
+		return;
+	}
+	if(tubeState == TubeState::TRAVELING)
+	{
+		if(sprite->animation() != (facingRight ? STAND_RIGHT : STAND_LEFT))
+			sprite->changeAnimation(facingRight ? STAND_RIGHT : STAND_LEFT);
+		sprite->setAnimationPaused(false);
+		sprite->update(deltaTime);
+		sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y) + PLAYER_VISUAL_OFFSET_Y_PX));
+		return;
+	}
+	if(tubeState == TubeState::EXITING)
+	{
+		if(sprite->animation() != (facingRight ? STAND_RIGHT : STAND_LEFT))
+			sprite->changeAnimation(facingRight ? STAND_RIGHT : STAND_LEFT);
+		sprite->setAnimationPaused(false);
+		sprite->update(deltaTime);
+
+		float t = 1.f - (float(tubeTimer) / float(TUBE_EXIT_TIME));
+		if(t < 0.f) t = 0.f;
+		if(t > 1.f) t = 1.f;
+       float startY = float(tubeExitPos.y + (tubeExitFromTop ? -16 : 16));
+		float endY = float(tubeExitPos.y);
+		posPlayer.y = int(startY + (endY - startY) * t);
+
+		tubeTimer -= deltaTime;
+		if(tubeTimer <= 0)
+		{
+			posPlayer.y = tubeExitPos.y;
+			tubeState = TubeState::DONE;
+		}
+		sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y) + PLAYER_VISUAL_OFFSET_Y_PX));
+		return;
+	}
+	if(tubeState == TubeState::DONE)
+	{
+		if(sprite->animation() != (facingRight ? STAND_RIGHT : STAND_LEFT))
+			sprite->changeAnimation(facingRight ? STAND_RIGHT : STAND_LEFT);
+		sprite->setAnimationPaused(false);
+		sprite->update(deltaTime);
+		sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y) + PLAYER_VISUAL_OFFSET_Y_PX));
+		return;
+	}
+
   if(doorState == DoorState::ENTERING || doorState == DoorState::LEAVING)
 	{
      sprite->setAnimationPaused(false);
@@ -151,8 +210,10 @@ void Player::update(int deltaTime)
 		return;
 	}
 
-  bool upPressed = Game::instance().getKey(GLFW_KEY_UP);
+    bool upPressed = Game::instance().getKey(GLFW_KEY_UP);
 	bool downPressed = Game::instance().getKey(GLFW_KEY_DOWN);
+ if(tubeState == TubeState::NONE && !upPressed && !downPressed)
+		tubeInputLocked = false;
 	bool isTouchingStair = map->isStairTile(posPlayer);
 	bool isClimbAnim = (sprite->animation() == PLANT_CLIMB_UP || sprite->animation() == PLANT_CLIMB_DOWN);
 	sprite->setAnimationPaused(isTouchingStair && !upPressed && !downPressed && isClimbAnim);
@@ -216,6 +277,24 @@ void Player::update(int deltaTime)
 		map->collisionMoveDown(posPlayer, glm::ivec2(16, 16), &posPlayer.y);
 	}
 
+	bool onTubeTop = map->isTubeTile(posPlayer, true);
+	bool onTubeBottom = map->isTubeTile(posPlayer, false);
+    if(upPressed || downPressed)
+		cout << "[TubeDebug] posPlayer=(" << posPlayer.x << "," << posPlayer.y << ") onTop=" << onTubeTop << " onBottom=" << onTubeBottom << " stair=" << isTouchingStair << " doorState=" << int(doorState) << " tubeLock=" << tubeInputLocked << endl;
+    bool tubeArrowPressed = upPressed || downPressed;
+  if(!tubeInputLocked && !isTouchingStair && doorState == DoorState::NONE &&
+		(onTubeTop || onTubeBottom) && tubeArrowPressed)
+	{
+       cout << "[TubeDebug] Activation accepted. Entering travel from pos=(" << posPlayer.x << "," << posPlayer.y << ")" << endl;
+        tubeState = TubeState::TRAVELING;
+		tubeTimer = 0;
+     tubeInputLocked = true;
+		if(sprite->animation() != (facingRight ? STAND_RIGHT : STAND_LEFT))
+			sprite->changeAnimation(facingRight ? STAND_RIGHT : STAND_LEFT);
+		sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y) + PLAYER_VISUAL_OFFSET_Y_PX));
+		return;
+	}
+
   if(!isTouchingStair && upPressed && map->isDoorTile(posPlayer))
 	{
 		doorState = DoorState::ENTERING;
@@ -260,7 +339,7 @@ void Player::setPosition(const glm::vec2 &pos)
 
 glm::vec2 Player::getPosition() const
 {
-	return glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y));
+ return glm::vec2(float(posPlayer.x), float(posPlayer.y));
 }
 
 bool Player::isDoorInteractionStarted() const
@@ -271,6 +350,44 @@ bool Player::isDoorInteractionStarted() const
 bool Player::hasDoorTransitionEnded() const
 {
 	return doorState == DoorState::ENTERED;
+}
+
+bool Player::isTubeEnterStarted() const
+{
+	return tubeState == TubeState::ENTERING;
+}
+
+bool Player::isTubeTraveling() const
+{
+	return tubeState == TubeState::TRAVELING;
+}
+
+bool Player::isTubeDone() const
+{
+	return tubeState == TubeState::DONE;
+}
+
+void Player::setTubeExitPos(const glm::ivec2 &exitPos)
+{
+	tubeExitPos = exitPos;
+}
+
+void Player::setTubeExitFromTop(bool fromTop)
+{
+	tubeExitFromTop = fromTop;
+}
+
+void Player::startTubeExit()
+{
+	tubeState = TubeState::EXITING;
+	tubeTimer = TUBE_EXIT_TIME;
+}
+
+void Player::resetTubeState()
+{
+	tubeState = TubeState::NONE;
+	tubeTimer = 0;
+   tubeInputLocked = true;
 }
 
 void Player::resetDoorState()

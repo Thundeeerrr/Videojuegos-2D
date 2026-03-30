@@ -32,6 +32,7 @@ namespace
 	const float PLAYER_COLLISION_HEIGHT_PX = 16.f;
 	const float PLAYER_SPRITE_HEIGHT_PX = 24.f;
 	const float PLAYER_VISUAL_OFFSET_Y_PX = PLAYER_COLLISION_HEIGHT_PX - PLAYER_SPRITE_HEIGHT_PX;
+   const int TUBE_UP_REACH_OFFSET_PX = 16;
 }
 
 
@@ -279,11 +280,11 @@ void Player::update(int deltaTime)
 
 	bool onTubeTop = map->isTubeTile(posPlayer, true);
 	bool onTubeBottom = map->isTubeTile(posPlayer, false);
+    bool onTubeBottomAbove = map->isTubeTile(glm::ivec2(posPlayer.x, posPlayer.y - TUBE_UP_REACH_OFFSET_PX), false);
     if(upPressed || downPressed)
-		cout << "[TubeDebug] posPlayer=(" << posPlayer.x << "," << posPlayer.y << ") onTop=" << onTubeTop << " onBottom=" << onTubeBottom << " stair=" << isTouchingStair << " doorState=" << int(doorState) << " tubeLock=" << tubeInputLocked << endl;
-    bool tubeArrowPressed = upPressed || downPressed;
-  if(!tubeInputLocked && !isTouchingStair && doorState == DoorState::NONE &&
-		(onTubeTop || onTubeBottom) && tubeArrowPressed)
+        cout << "[TubeDebug] posPlayer=(" << posPlayer.x << "," << posPlayer.y << ") onTop=" << onTubeTop << " onBottom=" << onTubeBottom << " onBottomAbove=" << onTubeBottomAbove << " stair=" << isTouchingStair << " doorState=" << int(doorState) << " tubeLock=" << tubeInputLocked << endl;
+	bool tubeActivationPressed = (onTubeTop && downPressed) || ((onTubeBottom || onTubeBottomAbove) && upPressed);
+  if(!tubeInputLocked && !isTouchingStair && doorState == DoorState::NONE && tubeActivationPressed)
 	{
        cout << "[TubeDebug] Activation accepted. Entering travel from pos=(" << posPlayer.x << "," << posPlayer.y << ")" << endl;
         tubeState = TubeState::TRAVELING;

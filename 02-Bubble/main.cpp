@@ -7,11 +7,31 @@
 
 #define TARGET_FRAMERATE 60.0f
 
+namespace
+{
+	ma_engine* gAudioEngine = nullptr;
+	bool gIsAudioMuted = false;
+	const float kMutedVolume = 0.f;
+	const float kUnmutedVolume = 1.f;
+}
+
 
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
-	if (action == GLFW_PRESS)
+   if (action == GLFW_PRESS)
+	{
+		if(key == GLFW_KEY_M && gAudioEngine != nullptr)
+		{
+			if(gIsAudioMuted)
+				ma_engine_set_volume(gAudioEngine, kUnmutedVolume);
+			else
+				ma_engine_set_volume(gAudioEngine, kMutedVolume);
+
+			gIsAudioMuted = !gIsAudioMuted;
+		}
+
 		Game::instance().keyPressed(key);
+    }
 	else if (action == GLFW_RELEASE)
 		Game::instance().keyReleased(key);
 }
@@ -39,6 +59,8 @@ int main(void)
 		// Handle audio init failure
 		return -1;
 	}
+    gAudioEngine = &engine;
+	gIsAudioMuted = false;
 	/* Initialize the library */
 	if (!glfwInit())
 		return -1;
@@ -89,6 +111,7 @@ int main(void)
 		glfwPollEvents();
 	}
 
+    ma_engine_uninit(&engine);
 	glfwTerminate();
 	return 0;
 }

@@ -3,9 +3,20 @@
 #include "Game.h"
 
 
+namespace
+{
+	bool isValidKeyCode(int key)
+	{
+		return key >= 0 && key <= GLFW_KEY_LAST;
+	}
+}
+
+
 void Game::init()
 {
 	bPlay = true;
+   for(int i = 0; i <= GLFW_KEY_LAST; ++i)
+		keys[i] = false;
 	glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
    glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -83,10 +94,10 @@ void Game::render()
 
 void Game::keyPressed(int key)
 {
-   keys[key] = true;
+    if(!isValidKeyCode(key))
+		return;
 
-	if(key == GLFW_KEY_ESCAPE) // Escape code
-		bPlay = false;
+	keys[key] = true;
 
   if(currentState == STATE_INTRO)
 		intro.skip();
@@ -96,8 +107,9 @@ void Game::keyPressed(int key)
 		menu.keyPressed(key);
   else if(currentState == STATE_INSTRUCTIONS)
 	{
-		if(key == GLFW_KEY_ENTER || key == GLFW_KEY_KP_ENTER || key == GLFW_KEY_BACKSPACE)
+      if(key == GLFW_KEY_ESCAPE || key == GLFW_KEY_ENTER || key == GLFW_KEY_KP_ENTER || key == GLFW_KEY_BACKSPACE)
 			changeState(STATE_MENU);
+       return;
 	}
 	else if(currentState == STATE_PLAYING)
 	{
@@ -110,10 +122,16 @@ void Game::keyPressed(int key)
      else if(key >= GLFW_KEY_1 && key <= GLFW_KEY_9)
 			scene.loadLevel(key - GLFW_KEY_1 + 1);
 	}
+
+	if(key == GLFW_KEY_ESCAPE) // Escape code
+		bPlay = false;
 }
 
 void Game::keyReleased(int key)
 {
+  if(!isValidKeyCode(key))
+		return;
+
 	keys[key] = false;
 }
 
@@ -131,6 +149,9 @@ void Game::mouseRelease(int button)
 
 bool Game::getKey(int key) const
 {
+   if(!isValidKeyCode(key))
+		return false;
+
 	return keys[key];
 }
 

@@ -35,6 +35,7 @@ public:
 	int animation() const;
 	
 	void setPosition(const glm::vec2 &pos);
+	void setLocalTransform(const glm::mat4 &transform);
 
 private:
 	Texture *texture;
@@ -43,6 +44,7 @@ private:
 	GLuint vbo;
 	GLint posLocation, texCoordLocation;
 	glm::vec2 position;
+  glm::mat4 localTransform;
 	int currentAnimation, currentKeyframe;
 	float timeAnimation;
 	glm::vec2 texCoordDispl;

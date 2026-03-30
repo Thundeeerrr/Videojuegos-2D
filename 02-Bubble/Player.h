@@ -32,6 +32,7 @@ public:
 	
 private:
 	bool bJumping;
+	bool facingRight;
 	glm::ivec2 tileMapDispl, posPlayer;
 	int jumpAngle, startY;
 	Texture spritesheet, healthTexture;
@@ -40,6 +41,7 @@ private:
 	int health;
   DoorState doorState;
 	int doorTimer;
+
 };
 
 

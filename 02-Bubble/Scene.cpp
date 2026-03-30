@@ -18,11 +18,16 @@ Scene::Scene()
 {
 	map = NULL;
 	player = NULL;
- dWasPressed = false;
+   dWasPressed = false;
 	hasDoorTarget = false;
 	hasSpawnOverride = false;
+  spawnAtDoorInLoadedLevel = false;
 	doorTargetTilePos = glm::ivec2(0);
 	spawnTileOverride = glm::ivec2(0);
+    currentLevelNum = 1;
+	hasReturnPoint = false;
+	returnLevelNum = 1;
+	returnTilePos = glm::ivec2(0);
 	godMode = false;
 }
 
@@ -52,6 +57,11 @@ void Scene::init(const std::string &sceneName)
 	player = new Player();
 	player->init(glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
  glm::ivec2 spawnTile(INIT_PLAYER_X_TILES, INIT_PLAYER_Y_TILES);
+    if(spawnAtDoorInLoadedLevel && !doorPositions.empty())
+	{
+		spawnTile = doorPositions[0];
+	}
+    spawnAtDoorInLoadedLevel = false;
 	if(hasSpawnOverride)
 	{
 		spawnTile = spawnTileOverride;
@@ -100,19 +110,34 @@ void Scene::update(int deltaTime)
 			doors[doorIdx]->open();
 			hasDoorTarget = true;
 			doorTargetTilePos = doors[doorIdx]->getTilePos();
+           if(currentLevelNum != 0)
+			{
+				hasReturnPoint = true;
+				returnLevelNum = currentLevelNum;
+				returnTilePos = doorTargetTilePos;
+			}
 		}
 	}
 
 	if(player->hasDoorTransitionEnded())
 	{
 		player->resetDoorState();
-		if(hasDoorTarget)
+       if(currentLevelNum == 0)
 		{
-			hasSpawnOverride = true;
-			spawnTileOverride = doorTargetTilePos;
+            if(hasReturnPoint)
+			{
+				hasSpawnOverride = true;
+				spawnTileOverride = returnTilePos;
+				loadLevel(returnLevelNum);
+				return;
+			}
 		}
-		loadLevel(0);
-		return;
+		else
+		{
+           spawnAtDoorInLoadedLevel = hasDoorTarget;
+			loadLevel(0);
+			return;
+		}
 	}
 }
 
@@ -193,11 +218,14 @@ void Scene::loadLevel(int levelNum)
 
 	if(levelNum == 0)
 	{
+     currentLevelNum = 0;
 		init("levels/KeyRoom.txt");
 		return;
 	}
 	if(levelNum < 1)
 		return;
+
+	currentLevelNum = levelNum;
 
 	stringstream levelPath;
 	levelPath << "levels/level";

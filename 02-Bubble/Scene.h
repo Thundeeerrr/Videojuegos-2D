@@ -47,6 +47,11 @@ private:
 	glm::ivec2 doorTargetTilePos;
 	bool hasSpawnOverride;
 	glm::ivec2 spawnTileOverride;
+    bool spawnAtDoorInLoadedLevel;
+	int currentLevelNum;
+	bool hasReturnPoint;
+	int returnLevelNum;
+	glm::ivec2 returnTilePos;
 
 	bool godMode;
 };

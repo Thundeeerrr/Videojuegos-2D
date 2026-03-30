@@ -17,6 +17,10 @@ namespace
 {
  const int PLAYER_CENTER_OFFSET_X_PX = 8;
 	const int PLAYER_COLLISION_HEIGHT_PX = 16;
+	const int PLAYER_FOOT_OFFSET_Y_PX = PLAYER_COLLISION_HEIGHT_PX;
+	const int PLAYER_FOOT_OFFSET_Y_MINUS_ONE_PX = PLAYER_COLLISION_HEIGHT_PX - 1;
+	const int PLAYER_HEAD_OFFSET_Y_PX = 0;
+	const int PLAYER_HEAD_OFFSET_Y_MINUS_ONE_PX = -1;
 
 	bool containsDoorTile(const std::vector<glm::ivec2> &tiles, const glm::ivec2 &tile)
 	{
@@ -154,9 +158,41 @@ void Scene::update(int deltaTime)
 	if(player->isTubeTraveling())
 	{
 		glm::vec2 playerPos = player->getPosition();
-     glm::ivec2 playerTile = map->worldToTile(playerPos + glm::vec2(float(PLAYER_CENTER_OFFSET_X_PX), float(PLAYER_COLLISION_HEIGHT_PX)));
-		glm::ivec2 exitTile = map->getTubeExit(playerTile);
-       cout << "[TubeDebug] Scene travel: playerPos=(" << playerPos.x << "," << playerPos.y << ") playerTile=(" << playerTile.x << "," << playerTile.y << ") exitTile=(" << exitTile.x << "," << exitTile.y << ")" << endl;
+      glm::ivec2 playerPosI(int(playerPos.x), int(playerPos.y));
+		bool onTop = map->isTubeTile(playerPosI, true);
+		bool onBottom = map->isTubeTile(playerPosI, false);
+		bool onBottomAbove = map->isTubeTile(glm::ivec2(playerPosI.x, playerPosI.y - 16), false);
+
+      glm::ivec2 sourceTile = map->worldToTile(playerPos + glm::vec2(float(PLAYER_CENTER_OFFSET_X_PX), float(PLAYER_FOOT_OFFSET_Y_PX)));
+		glm::ivec2 exitTile = sourceTile;
+
+		auto trySourceOffset = [&](int offsetY) -> bool
+		{
+			glm::ivec2 candidate = map->worldToTile(playerPos + glm::vec2(float(PLAYER_CENTER_OFFSET_X_PX), float(offsetY)));
+			glm::ivec2 candidateExit = map->getTubeExit(candidate);
+			if(candidateExit != candidate)
+			{
+				sourceTile = candidate;
+				exitTile = candidateExit;
+				return true;
+			}
+			return false;
+		};
+
+		if(onBottomAbove)
+		{
+			if(!trySourceOffset(PLAYER_HEAD_OFFSET_Y_PX))
+				if(!trySourceOffset(PLAYER_HEAD_OFFSET_Y_MINUS_ONE_PX))
+					trySourceOffset(PLAYER_FOOT_OFFSET_Y_MINUS_ONE_PX);
+		}
+		else
+		{
+			if(!trySourceOffset(PLAYER_FOOT_OFFSET_Y_PX))
+				if(!trySourceOffset(PLAYER_FOOT_OFFSET_Y_MINUS_ONE_PX))
+					trySourceOffset(PLAYER_HEAD_OFFSET_Y_PX);
+		}
+
+		cout << "[TubeDebug] Scene travel: playerPos=(" << playerPos.x << "," << playerPos.y << ") onTop=" << onTop << " onBottom=" << onBottom << " onBottomAbove=" << onBottomAbove << " sourceTile=(" << sourceTile.x << "," << sourceTile.y << ") exitTile=(" << exitTile.x << "," << exitTile.y << ")" << endl;
 		glm::vec2 exitWorld = map->tileToWorld(exitTile);
        bool exitFromTop = map->isTubeBottomTile(exitTile);
        glm::vec2 exitFinalWorld;

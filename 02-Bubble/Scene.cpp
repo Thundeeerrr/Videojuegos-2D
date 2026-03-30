@@ -82,6 +82,8 @@ void Scene::init(const std::string &sceneName)
  glm::ivec2 spawnTile(INIT_PLAYER_X_TILES, INIT_PLAYER_Y_TILES);
   if(currentLevelNum == 4)
 		spawnTile = glm::ivec2(4, 1);
+  else if(currentLevelNum == 5)
+		spawnTile = glm::ivec2(15, 8);
     if(spawnAtDoorInLoadedLevel && !doorPositions.empty())
 	{
 		spawnTile = doorPositions[0];

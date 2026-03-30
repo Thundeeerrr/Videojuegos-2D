@@ -65,6 +65,7 @@ private:
 	set<int> collidedTiles;
   vector<glm::ivec2> doorPositions;
   vector<TubePair> tubeConnections;
+  vector<glm::ivec2> tubeAlwaysBottomRenderTiles;
 	int stair;
 };
 

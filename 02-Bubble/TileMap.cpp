@@ -17,6 +17,8 @@ namespace
 	const int TILE_TUBE_B_BOTTOM = 995;
     const int TILE_TUBE_C_TOP = 994;
 	const int TILE_TUBE_C_BOTTOM = 993;
+ const int TILE_TUBE_D_TOP = 991;
+	const int TILE_TUBE_D_BOTTOM = 990;
     const int DEFAULT_TUBE_TOP_RENDER_TILE_ID = 55;
 	const int DEFAULT_TUBE_BOTTOM_RENDER_TILE_ID = 135;
 	const int LEVEL04_TUBE_TOP_RENDER_TILE_ID = 36;
@@ -113,12 +115,15 @@ bool TileMap::loadLevel(const string &levelFile)
 	collidedTiles.clear();
  doorPositions.clear();
 	tubeConnections.clear();
+   tubeAlwaysBottomRenderTiles.clear();
     vector<glm::ivec2> tubeATopTiles;
 	vector<glm::ivec2> tubeABottomTiles;
 	vector<glm::ivec2> tubeBTopTiles;
 	vector<glm::ivec2> tubeBBottomTiles;
  vector<glm::ivec2> tubeCTopTiles;
 	vector<glm::ivec2> tubeCBottomTiles;
+ vector<glm::ivec2> tubeDTopTiles;
+	vector<glm::ivec2> tubeDBottomTiles;
 	getline(fin, line);
 	sstream.clear();
 	sstream.str(line);
@@ -179,6 +184,18 @@ bool TileMap::loadLevel(const string &levelFile)
 				tubeCBottomTiles.push_back(glm::ivec2(i, j));
 				map[j * mapSize.x + i] = -2;
 			}
+            else if(tileId == TILE_TUBE_D_TOP)
+			{
+				tubeDTopTiles.push_back(glm::ivec2(i, j));
+				tubeAlwaysBottomRenderTiles.push_back(glm::ivec2(i, j));
+				map[j * mapSize.x + i] = -2;
+			}
+			else if(tileId == TILE_TUBE_D_BOTTOM)
+			{
+				tubeDBottomTiles.push_back(glm::ivec2(i, j));
+				tubeAlwaysBottomRenderTiles.push_back(glm::ivec2(i, j));
+				map[j * mapSize.x + i] = -2;
+			}
 			else
 				map[j * mapSize.x + i] = tileId;
 		}
@@ -210,6 +227,15 @@ bool TileMap::loadLevel(const string &levelFile)
 		pair.exit = tubeCBottomTiles[i];
 		tubeConnections.push_back(pair);
 	}
+
+	int pairedTubeCountD = min(int(tubeDTopTiles.size()), int(tubeDBottomTiles.size()));
+	for(int i = 0; i < pairedTubeCountD; ++i)
+	{
+		TubePair pair;
+		pair.entry = tubeDTopTiles[i];
+		pair.exit = tubeDBottomTiles[i];
+		tubeConnections.push_back(pair);
+	}
 	fin.close();
 	
 	return true;
@@ -232,6 +258,18 @@ void TileMap::prepareArrays(const glm::vec2 &minCoords, ShaderProgram &program)
 			if(tile == -2)
 			{
 				glm::ivec2 tilePos(i, j);
+                bool forcedBottomRender = false;
+				for(int r = 0; r < int(tubeAlwaysBottomRenderTiles.size()); ++r)
+				{
+					if(tubeAlwaysBottomRenderTiles[r] == tilePos)
+					{
+						forcedBottomRender = true;
+						break;
+					}
+				}
+				if(forcedBottomRender)
+					tileToRender = tubeBottomRenderTileId;
+				else
 				for(int k = 0; k < int(tubeConnections.size()); ++k)
 				{
 					if(tubeConnections[k].entry == tilePos)
@@ -409,6 +447,12 @@ bool TileMap::isTubeTile(const glm::ivec2 &pos, bool topVariant) const
 
     auto isDesiredTubeVariant = [&](const glm::ivec2 &tilePos) -> bool
 	{
+        for(int i = 0; i < int(tubeAlwaysBottomRenderTiles.size()); ++i)
+		{
+			if(tubeAlwaysBottomRenderTiles[i] == tilePos)
+				return !topVariant;
+		}
+
 		for(int i = 0; i < int(tubeConnections.size()); ++i)
 		{
 			if(topVariant && tubeConnections[i].entry == tilePos)
@@ -461,6 +505,12 @@ glm::ivec2 TileMap::getTubeExit(const glm::ivec2 &entryTile) const
 
 bool TileMap::isTubeBottomTile(const glm::ivec2 &tilePos) const
 {
+    for(int i = 0; i < int(tubeAlwaysBottomRenderTiles.size()); ++i)
+	{
+		if(tubeAlwaysBottomRenderTiles[i] == tilePos)
+			return true;
+	}
+
 	for(int i = 0; i < int(tubeConnections.size()); ++i)
 	{
 		if(tubeConnections[i].exit == tilePos)

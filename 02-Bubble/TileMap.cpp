@@ -25,6 +25,8 @@ namespace
 	const int LEVEL04_TUBE_BOTTOM_RENDER_TILE_ID = 113;
    const int LEVEL05_TUBE_TOP_RENDER_TILE_ID = 196;
 	const int LEVEL05_TUBE_BOTTOM_RENDER_TILE_ID = 154;
+	const int TILE_KEY = 998;
+	const int TILE_BOMB = 989;
 }
 
 
@@ -124,6 +126,7 @@ bool TileMap::loadLevel(const string &levelFile)
 	vector<glm::ivec2> tubeCBottomTiles;
  vector<glm::ivec2> tubeDTopTiles;
 	vector<glm::ivec2> tubeDBottomTiles;
+	keyPositions.clear();
 	getline(fin, line);
 	sstream.clear();
 	sstream.str(line);
@@ -195,6 +198,11 @@ bool TileMap::loadLevel(const string &levelFile)
 				tubeDBottomTiles.push_back(glm::ivec2(i, j));
 				tubeAlwaysBottomRenderTiles.push_back(glm::ivec2(i, j));
 				map[j * mapSize.x + i] = -2;
+			}
+            else if(tileId == TILE_KEY)
+			{
+				keyPositions.insert(glm::ivec2(i, j));
+				map[j * mapSize.x + i] = 53;
 			}
 			else
 				map[j * mapSize.x + i] = tileId;
@@ -522,6 +530,11 @@ bool TileMap::isTubeBottomTile(const glm::ivec2 &tilePos) const
 	return false;
 }
 
+bool TileMap::isKeyTile(const glm::ivec2 &pos) const
+{
+	return keyPositions.find(glm::ivec2((pos.x + 8) / tileSize, (pos.y + 15) / tileSize)) != keyPositions.end();
+}
+
 glm::vec2 TileMap::getMapSize() const
 {
 	return mapSize;
@@ -529,7 +542,10 @@ glm::vec2 TileMap::getMapSize() const
 
 
 
-
+void TileMap::removeKeyAtTile(const glm::ivec2& tilePos)
+{
+	keyPositions.erase(tilePos);
+}
 
 
 

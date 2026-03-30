@@ -4,6 +4,7 @@
 
 #include <glm/glm.hpp>
 #include <set>
+#include <unordered_set>
 #include <vector>
 #include "Texture.h"
 #include "ShaderProgram.h"
@@ -18,6 +19,15 @@
 class TileMap
 {
 	struct TubePair { glm::ivec2 entry; glm::ivec2 exit; };
+
+public:
+	struct IVec2Hash {
+		size_t operator()(const glm::ivec2& v) const noexcept {
+			size_t h1 = std::hash<int>{}(v.x);
+			size_t h2 = std::hash<int>{}(v.y);
+			return h1 ^ (h2 << 1);
+		}
+	};
 
 private:
 	TileMap(const string &levelFile, const glm::vec2 &minCoords, ShaderProgram &program);
@@ -43,9 +53,12 @@ public:
   bool isTubeBottomTile(const glm::ivec2 &tilePos) const;
 	glm::ivec2 worldToTile(const glm::vec2 &worldPos) const { return glm::ivec2(int(worldPos.x) / tileSize, int(worldPos.y) / tileSize); }
 	glm::vec2 tileToWorld(const glm::ivec2 &tilePos) const { return glm::vec2(tilePos.x * tileSize, tilePos.y * tileSize); }
+	bool isKeyTile(const glm::ivec2& pos) const;
 	glm::vec2 getMapSize() const;
 	const vector<glm::ivec2> &getDoorPositions() const { return doorPositions; }
-	
+	const std::unordered_set<glm::ivec2, IVec2Hash>& getKeyPositions() const { return keyPositions; }
+	void removeKeyAtTile(const glm::ivec2& tilePos);
+
 private:
 	bool loadLevel(const string &levelFile);
 	void prepareArrays(const glm::vec2 &minCoords, ShaderProgram &program);
@@ -63,10 +76,11 @@ private:
 	int tubeBottomRenderTileId;
 	int *map;
 	set<int> collidedTiles;
-  vector<glm::ivec2> doorPositions;
-  vector<TubePair> tubeConnections;
-  vector<glm::ivec2> tubeAlwaysBottomRenderTiles;
+	vector<glm::ivec2> doorPositions;
+	vector<TubePair> tubeConnections;
+	vector<glm::ivec2> tubeAlwaysBottomRenderTiles;
 	int stair;
+	std::unordered_set<glm::ivec2, IVec2Hash> keyPositions;
 };
 
 

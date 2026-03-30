@@ -9,6 +9,7 @@
 #include "TileMap.h"
 #include "Player.h"
 #include "Door.h"
+#include "Key.h"
 
 
 // Scene contains all the entities of our game.
@@ -34,12 +35,14 @@ public:
 private:
 	void initShaders();
 	void freeDoors();
+    void freeKeys();
 	int findClosestDoorIndex(const glm::ivec2 &playerTilePos) const;
 
 private:
 	TileMap *map;
 	Player *player;
    std::vector<Door*> doors;
+   std::vector<Key*> keys;
 	ShaderProgram texProgram;
 	float currentTime;
 	glm::mat4 projection;

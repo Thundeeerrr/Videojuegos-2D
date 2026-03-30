@@ -53,6 +53,7 @@ Player::~Player()
 void Player::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 {
 	health = 3;
+   keyCount = 0;
 	bJumping = false;
 	facingRight = true;
   doorState = DoorState::NONE;
@@ -353,6 +354,16 @@ void Player::setPosition(const glm::vec2 &pos)
 glm::vec2 Player::getPosition() const
 {
  return glm::vec2(float(posPlayer.x), float(posPlayer.y));
+}
+
+void Player::addKey()
+{
+	++keyCount;
+}
+
+int Player::getKeyCount() const
+{
+	return keyCount;
 }
 
 bool Player::isDoorInteractionStarted() const

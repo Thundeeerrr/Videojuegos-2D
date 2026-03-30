@@ -11,10 +11,12 @@ using namespace std;
 namespace
 {
 	const int TILE_DOOR = 999;
-   const int TILE_TUBE_A_TOP = 998;
+ const int TILE_TUBE_A_TOP = 992;
 	const int TILE_TUBE_A_BOTTOM = 997;
 	const int TILE_TUBE_B_TOP = 996;
 	const int TILE_TUBE_B_BOTTOM = 995;
+    const int TILE_TUBE_C_TOP = 994;
+	const int TILE_TUBE_C_BOTTOM = 993;
     const int TILE_TUBE_TOP_RENDER = 55;
 	const int TILE_TUBE_BOTTOM_RENDER = 135;
 }
@@ -99,6 +101,8 @@ bool TileMap::loadLevel(const string &levelFile)
 	vector<glm::ivec2> tubeABottomTiles;
 	vector<glm::ivec2> tubeBTopTiles;
 	vector<glm::ivec2> tubeBBottomTiles;
+ vector<glm::ivec2> tubeCTopTiles;
+	vector<glm::ivec2> tubeCBottomTiles;
 	getline(fin, line);
 	sstream.clear();
 	sstream.str(line);
@@ -149,6 +153,16 @@ bool TileMap::loadLevel(const string &levelFile)
 				tubeBBottomTiles.push_back(glm::ivec2(i, j));
 				map[j * mapSize.x + i] = -2;
 			}
+            else if(tileId == TILE_TUBE_C_TOP)
+			{
+				tubeCTopTiles.push_back(glm::ivec2(i, j));
+				map[j * mapSize.x + i] = -2;
+			}
+			else if(tileId == TILE_TUBE_C_BOTTOM)
+			{
+				tubeCBottomTiles.push_back(glm::ivec2(i, j));
+				map[j * mapSize.x + i] = -2;
+			}
 			else
 				map[j * mapSize.x + i] = tileId;
 		}
@@ -169,6 +183,15 @@ bool TileMap::loadLevel(const string &levelFile)
 		TubePair pair;
 		pair.entry = tubeBTopTiles[i];
 		pair.exit = tubeBBottomTiles[i];
+		tubeConnections.push_back(pair);
+	}
+
+	int pairedTubeCountC = min(int(tubeCTopTiles.size()), int(tubeCBottomTiles.size()));
+	for(int i = 0; i < pairedTubeCountC; ++i)
+	{
+		TubePair pair;
+		pair.entry = tubeCTopTiles[i];
+		pair.exit = tubeCBottomTiles[i];
 		tubeConnections.push_back(pair);
 	}
 	fin.close();

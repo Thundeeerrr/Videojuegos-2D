@@ -53,20 +53,29 @@ Scene::~Scene()
 	if(player != NULL)
 		delete player;
    freeDoors();
+   freeKeys();
 }
 
 
 void Scene::init(const std::string &sceneName)
 {
 	initShaders();
-   freeDoors();
+	freeDoors();
+	freeKeys();
 	map = TileMap::createTileMap(sceneName, glm::vec2(SCREEN_X, SCREEN_Y), texProgram);
- const std::vector<glm::ivec2> &doorPositions = map->getDoorPositions();
+	const std::vector<glm::ivec2> &doorPositions = map->getDoorPositions();
+	const std::unordered_set<glm::ivec2, TileMap::IVec2Hash> &keyPositions = map->getKeyPositions();
 	for(int i=0; i<int(doorPositions.size()); ++i)
 	{
 		Door *door = new Door();
 		door->init(doorPositions[i], texProgram);
 		doors.push_back(door);
+	}
+	for(auto it=keyPositions.begin(); it != keyPositions.end(); ++it)
+	{
+		Key *key = new Key();
+		key->init(*it, texProgram);
+		keys.push_back(key);
 	}
 	player = new Player();
 	player->init(glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
@@ -129,14 +138,14 @@ void Scene::init(const std::string &sceneName)
 	projection = glm::ortho(0.f, float(map->getMapSize().x * map->getTileSize()), float(map->getMapSize().y * map->getTileSize()), 0.f);
 	//projection = glm::ortho(0.f, float(SCREEN_WIDTH), float(SCREEN_HEIGHT), 0.f);
 	currentTime = 0.0f;
- dWasPressed = false;
+	dWasPressed = false;
 	hasDoorTarget = false;
 }
 
 void Scene::update(int deltaTime)
 {
 	currentTime += deltaTime;
-  bool dPressed = Game::instance().getKey(GLFW_KEY_D);
+	bool dPressed = Game::instance().getKey(GLFW_KEY_D);
 	if(dPressed && !dWasPressed)
 	{
 		for(int i=0; i<int(doors.size()); ++i)
@@ -148,13 +157,25 @@ void Scene::update(int deltaTime)
 		doors[i]->update(deltaTime);
 	player->update(deltaTime);
 
+	glm::vec2 playerPos = player->getPosition();
+	glm::ivec2 playerTilePos((int(playerPos.x) + 8) / map->getTileSize(),(int(playerPos.y) + 15) / map->getTileSize());
+
+	for (int i = 0; i < int(keys.size()); )
+	{
+		if (keys[i]->getTilePos() == playerTilePos)
+		{
+			cout << "Key collected at tile (" << playerTilePos.x << ", " << playerTilePos.y << ")" << endl;
+			player->addKey();
+			map->removeKeyAtTile(keys[i]->getTilePos());
+			delete keys[i];
+			keys.erase(keys.begin() + i);
+		}
+		else
+			++i;
+	}
+
 	if(player->isDoorInteractionStarted())
 	{
-		glm::vec2 playerPos = player->getPosition();
-		glm::ivec2 playerTilePos(
-			(int(playerPos.x) + 8) / map->getTileSize(),
-			(int(playerPos.y) + 15) / map->getTileSize());
-
 		int doorIdx = findClosestDoorIndex(playerTilePos);
 		if(doorIdx >= 0)
 		{
@@ -212,6 +233,8 @@ void Scene::render()
 	map->render();
    for(int i=0; i<int(doors.size()); ++i)
 		doors[i]->render();
+   for(int i=0; i<int(keys.size()); ++i)
+		keys[i]->render();
 	player->render();
 }
 
@@ -220,6 +243,13 @@ void Scene::freeDoors()
 	for(int i=0; i<int(doors.size()); ++i)
 		delete doors[i];
 	doors.clear();
+}
+
+void Scene::freeKeys()
+{
+	for(int i=0; i<int(keys.size()); ++i)
+		delete keys[i];
+	keys.clear();
 }
 
 void Scene::initShaders()

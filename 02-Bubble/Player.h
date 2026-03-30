@@ -26,6 +26,8 @@ public:
 	void setTileMap(TileMap *tileMap);
 	void setPosition(const glm::vec2 &pos);
 	glm::vec2 getPosition() const;
+  void addKey();
+	int getKeyCount() const;
 	bool isDoorInteractionStarted() const;
 	bool hasDoorTransitionEnded() const;
   void startDoorExitAnimation();
@@ -40,6 +42,7 @@ private:
 	Sprite *sprite, *healthSprite;
 	TileMap *map;
 	int health;
+  int keyCount;
   DoorState doorState;
 	int doorTimer;
 

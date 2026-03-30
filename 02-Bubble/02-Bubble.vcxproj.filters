@@ -57,6 +57,9 @@
     <ClInclude Include="Door.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
+	<ClInclude Include="Key.h">
+	  <Filter>Archivos de encabezado</Filter>
+	</ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Game.cpp">
@@ -101,6 +104,9 @@
     <ClCompile Include="Door.cpp">
       <Filter>Archivos de código fuente</Filter>
     </ClCompile>
+	<ClCompile Include="Key.cpp">
+	  <Filter>Archivos de código fuente</Filter>
+	</ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="docs\main_menu.md" />

@@ -10,6 +10,8 @@ using namespace std;
 namespace
 {
 	const int TILE_DOOR = 999;
+	const int TILE_KEY = 998;
+	const int TILE_BOMB = 997;
 }
 
 
@@ -86,7 +88,8 @@ bool TileMap::loadLevel(const string &levelFile)
 
 	// Read the collided tiles, first read the quantity of collided tiles and then the tile ids. Clear the set of collided tiles before reading them in case of changing levels.
 	collidedTiles.clear();
- doorPositions.clear();
+	doorPositions.clear();
+	keyPositions.clear();
 	getline(fin, line);
 	sstream.clear();
 	sstream.str(line);
@@ -116,6 +119,11 @@ bool TileMap::loadLevel(const string &levelFile)
 			{
 				doorPositions.push_back(glm::ivec2(i, j));
 				map[j * mapSize.x + i] = -1;
+			}
+            else if(tileId == TILE_KEY)
+			{
+				keyPositions.insert(glm::ivec2(i, j));
+				map[j * mapSize.x + i] = 53;
 			}
 			else
 				map[j * mapSize.x + i] = tileId;
@@ -279,6 +287,11 @@ bool TileMap::isDoorTile(const glm::ivec2 &pos) const
 	return map[y * mapSize.x + x] == -1;
 }
 
+bool TileMap::isKeyTile(const glm::ivec2 &pos) const
+{
+	return keyPositions.find(glm::ivec2((pos.x + 8) / tileSize, (pos.y + 15) / tileSize)) != keyPositions.end();
+}
+
 glm::vec2 TileMap::getMapSize() const
 {
 	return mapSize;
@@ -286,7 +299,10 @@ glm::vec2 TileMap::getMapSize() const
 
 
 
-
+void TileMap::removeKeyAtTile(const glm::ivec2& tilePos)
+{
+	keyPositions.erase(tilePos);
+}
 
 
 

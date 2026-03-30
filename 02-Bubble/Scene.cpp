@@ -80,6 +80,8 @@ void Scene::init(const std::string &sceneName)
     bool shouldPlayDoorExitAnimation = false;
     bool shouldKeepSpawnDoorOpen = false;
  glm::ivec2 spawnTile(INIT_PLAYER_X_TILES, INIT_PLAYER_Y_TILES);
+  if(currentLevelNum == 4)
+		spawnTile = glm::ivec2(4, 1);
     if(spawnAtDoorInLoadedLevel && !doorPositions.empty())
 	{
 		spawnTile = doorPositions[0];

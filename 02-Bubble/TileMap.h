@@ -59,6 +59,8 @@ private:
 	int tileSize, blockSize;
 	Texture tilesheet;
 	glm::vec2 tileTexSize;
+   int tubeTopRenderTileId;
+	int tubeBottomRenderTileId;
 	int *map;
 	set<int> collidedTiles;
   vector<glm::ivec2> doorPositions;

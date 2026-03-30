@@ -17,8 +17,12 @@ namespace
 	const int TILE_TUBE_B_BOTTOM = 995;
     const int TILE_TUBE_C_TOP = 994;
 	const int TILE_TUBE_C_BOTTOM = 993;
-    const int TILE_TUBE_TOP_RENDER = 55;
-	const int TILE_TUBE_BOTTOM_RENDER = 135;
+    const int DEFAULT_TUBE_TOP_RENDER_TILE_ID = 55;
+	const int DEFAULT_TUBE_BOTTOM_RENDER_TILE_ID = 135;
+	const int LEVEL04_TUBE_TOP_RENDER_TILE_ID = 36;
+	const int LEVEL04_TUBE_BOTTOM_RENDER_TILE_ID = 113;
+   const int LEVEL05_TUBE_TOP_RENDER_TILE_ID = 196;
+	const int LEVEL05_TUBE_BOTTOM_RENDER_TILE_ID = 154;
 }
 
 
@@ -83,6 +87,18 @@ bool TileMap::loadLevel(const string &levelFile)
 	getline(fin, line);
 	sstream.str(line);
 	sstream >> tilesheetFile;
+   tubeTopRenderTileId = DEFAULT_TUBE_TOP_RENDER_TILE_ID;
+	tubeBottomRenderTileId = DEFAULT_TUBE_BOTTOM_RENDER_TILE_ID;
+	if(tilesheetFile.find("level4-def") != string::npos)
+	{
+		tubeTopRenderTileId = LEVEL04_TUBE_TOP_RENDER_TILE_ID;
+		tubeBottomRenderTileId = LEVEL04_TUBE_BOTTOM_RENDER_TILE_ID;
+	}
+   else if(tilesheetFile.find("level5-def") != string::npos)
+	{
+		tubeTopRenderTileId = LEVEL05_TUBE_TOP_RENDER_TILE_ID;
+		tubeBottomRenderTileId = LEVEL05_TUBE_BOTTOM_RENDER_TILE_ID;
+	}
 	tilesheet.loadFromFile(tilesheetFile, TEXTURE_PIXEL_FORMAT_RGBA);
 	tilesheet.setWrapS(GL_CLAMP_TO_EDGE);
 	tilesheet.setWrapT(GL_CLAMP_TO_EDGE);
@@ -220,12 +236,12 @@ void TileMap::prepareArrays(const glm::vec2 &minCoords, ShaderProgram &program)
 				{
 					if(tubeConnections[k].entry == tilePos)
 					{
-						tileToRender = TILE_TUBE_TOP_RENDER;
+                        tileToRender = tubeTopRenderTileId;
 						break;
 					}
 					if(tubeConnections[k].exit == tilePos)
 					{
-						tileToRender = TILE_TUBE_BOTTOM_RENDER;
+                     tileToRender = tubeBottomRenderTileId;
 						break;
 					}
 				}

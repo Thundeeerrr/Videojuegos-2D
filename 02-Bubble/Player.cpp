@@ -287,8 +287,8 @@ void Player::update(int deltaTime)
   if(!tubeInputLocked && !isTouchingStair && doorState == DoorState::NONE && tubeActivationPressed)
 	{
        cout << "[TubeDebug] Activation accepted. Entering travel from pos=(" << posPlayer.x << "," << posPlayer.y << ")" << endl;
-        tubeState = TubeState::TRAVELING;
-		tubeTimer = 0;
+       tubeState = TubeState::ENTERING;
+		tubeTimer = TUBE_ENTER_TIME;
      tubeInputLocked = true;
 		if(sprite->animation() != (facingRight ? STAND_RIGHT : STAND_LEFT))
 			sprite->changeAnimation(facingRight ? STAND_RIGHT : STAND_LEFT);
@@ -308,6 +308,18 @@ void Player::update(int deltaTime)
 
 void Player::render()
 {
+  if(tubeState == TubeState::ENTERING || tubeState == TubeState::TRAVELING)
+	{
+		glm::vec2 healthPos = glm::vec2(0.0f, 0.0f);
+		for (int i = 0; i < health; i++)
+		{
+			healthSprite->setPosition(healthPos);
+			healthSprite->render();
+			healthPos.x += 15.f;
+		}
+		return;
+	}
+
   if(!facingRight)
 	{
 		glm::mat4 local = glm::translate(glm::mat4(1.0f), glm::vec3(PLAYER_FRAME_WIDTH_PX, 0.f, 0.f));

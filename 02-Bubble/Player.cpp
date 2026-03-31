@@ -393,6 +393,19 @@ void Player::update(int deltaTime)
 		int probeY = playerPos.y + playerH;
 		return glm::ivec2(probeX / tileSize, probeY / tileSize);
 	};
+  glm::ivec2 playerTile = glm::ivec2(
+		int((posPlayer.x + playerW / 2.f) / tileSize),
+		int((posPlayer.y + playerH - 1.f) / tileSize));
+	auto isDoorObjectTile = [&](const glm::ivec2 &tilePos) -> bool
+	{
+		const std::vector<glm::ivec2> &doorTiles = map->getDoorPositions();
+		for(int i = 0; i < int(doorTiles.size()); ++i)
+		{
+			if(doorTiles[i] == tilePos)
+				return true;
+		}
+		return false;
+	};
 
 	if(onGround && !bJumpPlatformActive)
 	{
@@ -440,10 +453,25 @@ void Player::update(int deltaTime)
 		}
 	}
 
+	if(map->isDoorTile(playerTile) && upPressed && !bWarpUsed)
+	{
+		glm::ivec2 destinationTile = map->getDoorDestination(playerTile);
+		if(destinationTile.x != -1)
+		{
+			posPlayer.x = destinationTile.x * tileSize;
+			posPlayer.y = destinationTile.y * tileSize - playerH + tileSize;
+		}
+		bWarpUsed = true;
+		playerTile = glm::ivec2(
+			int((posPlayer.x + playerW / 2.f) / tileSize),
+			int((posPlayer.y + playerH - 1.f) / tileSize));
+	}
+
   glm::ivec2 warpTileAfter = getFeetTile(posPlayer);
 	int warpTileAfterId = map->getTile(warpTileAfter.x, warpTileAfter.y);
 	bool onWarpTile = warpTileAfterId == TileMap::WARP_TILE_FLOOR || warpTileAfterId == TileMap::WARP_TILE_NO_FLOOR;
-	if(!downPressed || !onWarpTile)
+ bool onDoorTile = map->isDoorTile(playerTile);
+	if((!downPressed || !onWarpTile) && (!upPressed || !onDoorTile))
 		bWarpUsed = false;
 
 	bool onTubeTop = map->isTubeTile(posPlayer, true);
@@ -464,7 +492,7 @@ void Player::update(int deltaTime)
 		return;
 	}
 
-  if(!isTouchingStair && upPressed && map->isDoorTile(posPlayer))
+   if(!isTouchingStair && upPressed && isDoorObjectTile(playerTile))
 	{
 		doorState = DoorState::ENTERING;
      doorTimer = DOOR_ANIM_DURATION_MS;

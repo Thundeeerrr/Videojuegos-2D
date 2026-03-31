@@ -31,6 +31,12 @@ namespace
 	const int WARP_TILE_NO_FLOOR_RENDER_ID = 37;
    const int LEVEL01_JUMP_PLATFORM_RENDER_TILE_ID = 142;
 	const int LEVEL04_JUMP_PLATFORM_RENDER_TILE_ID = 114;
+   const int LEVEL02_DOOR_NO_STAIRS_RENDER_TILE_ID = 30;
+	const int LEVEL02_DOOR_STAIRS_RENDER_TILE_ID = 67;
+	const int LEVEL04_DOOR_NO_STAIRS_RENDER_TILE_ID = 28;
+	const int LEVEL04_DOOR_STAIRS_RENDER_TILE_ID = 122;
+	const int LEVEL05_DOOR_NO_STAIRS_RENDER_TILE_ID = 123;
+	const int LEVEL05_DOOR_STAIRS_RENDER_TILE_ID = 164;
 }
 
 
@@ -98,20 +104,31 @@ bool TileMap::loadLevel(const string &levelFile)
    tubeTopRenderTileId = DEFAULT_TUBE_TOP_RENDER_TILE_ID;
 	tubeBottomRenderTileId = DEFAULT_TUBE_BOTTOM_RENDER_TILE_ID;
     jumpPlatformRenderTileId = -1;
+    doorTileStairsRenderTileId = -1;
+	doorTileNoStairsRenderTileId = -1;
 	if(tilesheetFile.find("level4-def") != string::npos)
 	{
 		tubeTopRenderTileId = LEVEL04_TUBE_TOP_RENDER_TILE_ID;
 		tubeBottomRenderTileId = LEVEL04_TUBE_BOTTOM_RENDER_TILE_ID;
        jumpPlatformRenderTileId = LEVEL04_JUMP_PLATFORM_RENDER_TILE_ID;
+       doorTileNoStairsRenderTileId = LEVEL04_DOOR_NO_STAIRS_RENDER_TILE_ID;
+		doorTileStairsRenderTileId = LEVEL04_DOOR_STAIRS_RENDER_TILE_ID;
 	}
     else if(tilesheetFile.find("level5-def") != string::npos)
 	{
 		tubeTopRenderTileId = LEVEL05_TUBE_TOP_RENDER_TILE_ID;
 		tubeBottomRenderTileId = LEVEL05_TUBE_BOTTOM_RENDER_TILE_ID;
+       doorTileNoStairsRenderTileId = LEVEL05_DOOR_NO_STAIRS_RENDER_TILE_ID;
+		doorTileStairsRenderTileId = LEVEL05_DOOR_STAIRS_RENDER_TILE_ID;
 	}
    else if(tilesheetFile.find("level1") != string::npos)
 	{
 		jumpPlatformRenderTileId = LEVEL01_JUMP_PLATFORM_RENDER_TILE_ID;
+	}
+   else if(tilesheetFile.find("level2") != string::npos)
+	{
+		doorTileNoStairsRenderTileId = LEVEL02_DOOR_NO_STAIRS_RENDER_TILE_ID;
+		doorTileStairsRenderTileId = LEVEL02_DOOR_STAIRS_RENDER_TILE_ID;
 	}
 	tilesheet.loadFromFile(tilesheetFile, TEXTURE_PIXEL_FORMAT_RGBA);
 	tilesheet.setWrapS(GL_CLAMP_TO_EDGE);
@@ -280,6 +297,10 @@ void TileMap::prepareArrays(const glm::vec2 &minCoords, ShaderProgram &program)
 				tileToRender = WARP_TILE_FLOOR_RENDER_ID;
 			else if(tile == WARP_TILE_NO_FLOOR)
 				tileToRender = WARP_TILE_NO_FLOOR_RENDER_ID;
+         else if(tile == DOOR_TILE_STAIRS)
+				tileToRender = doorTileStairsRenderTileId;
+			else if(tile == DOOR_TILE_NO_STAIRS)
+				tileToRender = doorTileNoStairsRenderTileId;
 			else if(tile == JUMP_PLATFORM_TILE)
 			{
 				if(jumpPlatformRenderTileId < 0)
@@ -463,21 +484,13 @@ bool TileMap::isStairTile(const glm::ivec2& pos) const
 	return map[y0 * mapSize.x + x] == stair || map[y1 * mapSize.x + x] == stair;
 }
 
-bool TileMap::isDoorTile(const glm::ivec2 &pos) const
+bool TileMap::isDoorTile(const glm::ivec2 &tilePos) const
 {
-	const int playerW = 16;
-	const int playerH = 16;
-
-	const int probeX = pos.x + playerW / 2;
-	const int probeY = pos.y + playerH - 1;
-
-	const int x = probeX / tileSize;
-	const int y = probeY / tileSize;
-
-	if(x < 0 || x >= mapSize.x || y < 0 || y >= mapSize.y)
+	if(tilePos.x < 0 || tilePos.x >= mapSize.x || tilePos.y < 0 || tilePos.y >= mapSize.y)
 		return false;
 
-	return map[y * mapSize.x + x] == -1;
+	int tile = map[tilePos.y * mapSize.x + tilePos.x];
+	return tile == DOOR_TILE_STAIRS || tile == DOOR_TILE_NO_STAIRS;
 }
 
 bool TileMap::isTubeTile(const glm::ivec2 &pos, bool topVariant) const
@@ -607,6 +620,26 @@ std::vector<std::pair<glm::ivec2, glm::ivec2>> TileMap::getWarpPlatformPairs() c
 	return pairs;
 }
 
+void TileMap::addDoorLink(glm::ivec2 a, glm::ivec2 b)
+{
+	doorLinks[encodeTile(a)] = encodeTile(b);
+	doorLinks[encodeTile(b)] = encodeTile(a);
+}
+
+void TileMap::clearDoorLinks()
+{
+	doorLinks.clear();
+}
+
+glm::ivec2 TileMap::getDoorDestination(glm::ivec2 tilePos) const
+{
+	auto it = doorLinks.find(encodeTile(tilePos));
+	if(it == doorLinks.end())
+		return glm::ivec2(-1, -1);
+
+	return decodeTile(it->second);
+}
+
 bool TileMap::isKeyTile(const glm::ivec2 &pos) const
 {
 	return keyPositions.find(glm::ivec2((pos.x + 8) / tileSize, (pos.y + 15) / tileSize)) != keyPositions.end();
@@ -622,6 +655,16 @@ glm::vec2 TileMap::getMapSize() const
 void TileMap::removeKeyAtTile(const glm::ivec2& tilePos)
 {
 	keyPositions.erase(tilePos);
+}
+
+int TileMap::encodeTile(glm::ivec2 pos) const
+{
+	return pos.y * mapSize.x + pos.x;
+}
+
+glm::ivec2 TileMap::decodeTile(int key) const
+{
+	return glm::ivec2(key % mapSize.x, key / mapSize.x);
 }
 
 

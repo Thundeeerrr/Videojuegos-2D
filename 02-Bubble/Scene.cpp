@@ -70,6 +70,23 @@ void Scene::init(const std::string &sceneName)
 	freeDoors();
 	freeKeys();
 	map = TileMap::createTileMap(sceneName, glm::vec2(SCREEN_X, SCREEN_Y), texProgram);
+ map->clearDoorLinks();
+   if(currentLevelNum == 2)
+	{
+		map->addDoorLink(glm::ivec2(12, 1), glm::ivec2(13, 3));
+		map->addDoorLink(glm::ivec2(6, 3), glm::ivec2(5, 5));
+		map->addDoorLink(glm::ivec2(12, 5), glm::ivec2(13, 7));
+	}
+	else if(currentLevelNum == 4)
+	{
+		map->addDoorLink(glm::ivec2(12, 1), glm::ivec2(13, 3));
+		map->addDoorLink(glm::ivec2(9, 5), glm::ivec2(10, 7));
+	}
+	else if(currentLevelNum == 5)
+	{
+		map->addDoorLink(glm::ivec2(3, 6), glm::ivec2(4, 8));
+		map->addDoorLink(glm::ivec2(8, 8), glm::ivec2(7, 10));
+	}
 	const std::vector<glm::ivec2> &doorPositions = map->getDoorPositions();
 	const std::unordered_set<glm::ivec2, TileMap::IVec2Hash> &keyPositions = map->getKeyPositions();
 	for(int i=0; i<int(doorPositions.size()); ++i)

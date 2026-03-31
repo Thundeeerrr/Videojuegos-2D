@@ -4,6 +4,7 @@
 
 #include <glm/glm.hpp>
 #include <set>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -37,6 +38,8 @@ public:
    static const int WARP_TILE_FLOOR = 989;
 	static const int WARP_TILE_NO_FLOOR = 988;
 	static const int JUMP_PLATFORM_TILE = 987;
+	static const int DOOR_TILE_STAIRS = 986;
+	static const int DOOR_TILE_NO_STAIRS = 985;
 
 	// Tile maps can only be created inside an OpenGL context
 	static TileMap *createTileMap(const string &levelFile, const glm::vec2 &minCoords, ShaderProgram &program);
@@ -53,7 +56,7 @@ public:
 	bool collisionMoveDown(const glm::ivec2 &pos, const glm::ivec2 &size, int *posY) const;
   bool collisionMoveUp(const glm::ivec2 &pos, const glm::ivec2 &size, int *posY) const;
 	bool isStairTile(const glm::ivec2& pos) const;
-   bool isDoorTile(const glm::ivec2 &pos) const;
+    bool isDoorTile(const glm::ivec2 &tilePos) const;
    bool isTubeTile(const glm::ivec2 &pos, bool topVariant) const;
 	glm::ivec2 getTubeExit(const glm::ivec2 &entryTile) const;
   bool isTubeBottomTile(const glm::ivec2 &tilePos) const;
@@ -66,10 +69,15 @@ public:
 	void removeKeyAtTile(const glm::ivec2& tilePos);
 	int getTile(int x, int y) const;
 	std::vector<std::pair<glm::ivec2, glm::ivec2>> getWarpPlatformPairs() const;
+	void addDoorLink(glm::ivec2 a, glm::ivec2 b);
+	void clearDoorLinks();
+	glm::ivec2 getDoorDestination(glm::ivec2 tilePos) const;
 
 private:
 	bool loadLevel(const string &levelFile);
 	void prepareArrays(const glm::vec2 &minCoords, ShaderProgram &program);
+	int encodeTile(glm::ivec2 pos) const;
+	glm::ivec2 decodeTile(int key) const;
 
 private:
 	GLuint vao;
@@ -83,6 +91,8 @@ private:
    int tubeTopRenderTileId;
 	int tubeBottomRenderTileId;
    int jumpPlatformRenderTileId;
+   int doorTileStairsRenderTileId;
+	int doorTileNoStairsRenderTileId;
 	int *map;
 	set<int> collidedTiles;
 	vector<glm::ivec2> doorPositions;
@@ -90,6 +100,7 @@ private:
 	vector<glm::ivec2> tubeAlwaysBottomRenderTiles;
 	int stair;
 	std::unordered_set<glm::ivec2, IVec2Hash> keyPositions;
+  std::unordered_map<int, int> doorLinks;
 };
 
 

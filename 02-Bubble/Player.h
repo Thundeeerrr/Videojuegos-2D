@@ -18,6 +18,7 @@ public:
 
    enum class DoorState { NONE, ENTERING, ENTERED, LEAVING };
 	enum class TubeState { NONE, ENTERING, TRAVELING, EXITING, DONE };
+	enum class WarpState { NONE, DISAPPEARING, APPEARING };
 
 public:
 	void init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram);
@@ -58,6 +59,9 @@ private:
 	glm::ivec2 tubeExitPos;
   bool tubeExitFromTop;
 	bool tubeInputLocked;
+  WarpState warpState;
+	int warpTimer;
+	glm::ivec2 warpDestinationPos;
    bool bWarpUsed = false;
  static const int TUBE_ENTER_TIME = 1000;
 	static const int TUBE_EXIT_TIME = 400;

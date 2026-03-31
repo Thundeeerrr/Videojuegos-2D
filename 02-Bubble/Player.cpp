@@ -13,7 +13,7 @@
 
 enum PlayerAnims
 {
-  STAND_LEFT, STAND_RIGHT, MOVE_LEFT, MOVE_RIGHT, DOOR_ENTER, DOOR_EXIT, PLANT_CLIMB_UP, PLANT_CLIMB_DOWN
+  STAND_LEFT, STAND_RIGHT, MOVE_LEFT, MOVE_RIGHT, DOOR_ENTER, DOOR_EXIT, PLANT_CLIMB_UP, PLANT_CLIMB_DOWN, WARP_DISAPPEAR, WARP_APPEAR
 };
 
 namespace
@@ -33,6 +33,10 @@ namespace
 	const float PLAYER_SPRITE_HEIGHT_PX = 24.f;
 	const float PLAYER_VISUAL_OFFSET_Y_PX = PLAYER_COLLISION_HEIGHT_PX - PLAYER_SPRITE_HEIGHT_PX;
    const int TUBE_UP_REACH_OFFSET_PX = 16;
+    const int WARP_ANIM_FRAMES = 4;
+    const int WARP_ANIM_FPS = 6;
+	const int WARP_ANIM_DURATION_MS = (1000 * WARP_ANIM_FRAMES) / WARP_ANIM_FPS;
+	const int WARP_ANIM_ROW = 3;
 }
 
 
@@ -63,6 +67,9 @@ void Player::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 	tubeExitPos = glm::ivec2(0);
     tubeExitFromTop = false;
     tubeInputLocked = false;
+    warpState = WarpState::NONE;
+	warpTimer = 0;
+	warpDestinationPos = glm::ivec2(0);
 	//spritesheet.loadFromFile("images/bub.png", TEXTURE_PIXEL_FORMAT_RGBA);
 	spritesheet.loadFromFile("images/BugsBunny-Sprites.png", TEXTURE_PIXEL_FORMAT_RGBA);
 	healthTexture.loadFromFile("images/heart.png", TEXTURE_PIXEL_FORMAT_RGBA);
@@ -73,7 +80,7 @@ void Player::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 	healthSprite = Sprite::createSprite(glm::ivec2(16, 16), glm::vec2(1.0, 1.0), &healthTexture, &shaderProgram);
 	#define UV(col, row) glm::vec2((col) / 8.f, (row) / 12.f)
 
- sprite->setNumberAnimations(8);
+     sprite->setNumberAnimations(10);
 	
 		/*sprite->setAnimationSpeed(STAND_LEFT, 8);
 		sprite->addKeyframe(STAND_LEFT, glm::vec2(0.f, 0.f));
@@ -125,6 +132,18 @@ void Player::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 	sprite->setAnimationSpeed(PLANT_CLIMB_DOWN, 8);
     sprite->addKeyframe(PLANT_CLIMB_DOWN, UV(PLANT_CLIMB_COL_B, PLANT_CLIMB_ROW));
 	sprite->addKeyframe(PLANT_CLIMB_DOWN, UV(PLANT_CLIMB_COL, PLANT_CLIMB_ROW));
+
+	sprite->setAnimationSpeed(WARP_DISAPPEAR, WARP_ANIM_FPS);
+	sprite->addKeyframe(WARP_DISAPPEAR, UV(0, WARP_ANIM_ROW));
+	sprite->addKeyframe(WARP_DISAPPEAR, UV(1, WARP_ANIM_ROW));
+	sprite->addKeyframe(WARP_DISAPPEAR, UV(2, WARP_ANIM_ROW));
+	sprite->addKeyframe(WARP_DISAPPEAR, UV(3, WARP_ANIM_ROW));
+
+	sprite->setAnimationSpeed(WARP_APPEAR, WARP_ANIM_FPS);
+	sprite->addKeyframe(WARP_APPEAR, UV(3, WARP_ANIM_ROW));
+	sprite->addKeyframe(WARP_APPEAR, UV(2, WARP_ANIM_ROW));
+	sprite->addKeyframe(WARP_APPEAR, UV(1, WARP_ANIM_ROW));
+	sprite->addKeyframe(WARP_APPEAR, UV(0, WARP_ANIM_ROW));
 		
 	sprite->changeAnimation(0);
 	tileMapDispl = tileMapPos;
@@ -134,6 +153,37 @@ void Player::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 
 void Player::update(int deltaTime)
 {
+ if(warpState == WarpState::DISAPPEARING)
+	{
+		sprite->setAnimationPaused(false);
+		if(sprite->animation() != WARP_DISAPPEAR)
+			sprite->changeAnimation(WARP_DISAPPEAR);
+		sprite->update(deltaTime);
+		warpTimer -= deltaTime;
+		if(warpTimer <= 0)
+		{
+			posPlayer = warpDestinationPos;
+			warpState = WarpState::APPEARING;
+			warpTimer = WARP_ANIM_DURATION_MS;
+		}
+		sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y) + PLAYER_VISUAL_OFFSET_Y_PX));
+		return;
+	}
+	if(warpState == WarpState::APPEARING)
+	{
+		sprite->setAnimationPaused(false);
+		if(sprite->animation() != WARP_APPEAR)
+			sprite->changeAnimation(WARP_APPEAR);
+		sprite->update(deltaTime);
+		warpTimer -= deltaTime;
+		if(warpTimer <= 0)
+        {
+			warpState = WarpState::NONE;
+			sprite->changeAnimation(facingRight ? STAND_RIGHT : STAND_LEFT);
+		}
+		sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y) + PLAYER_VISUAL_OFFSET_Y_PX));
+		return;
+	}
    if(tubeState == TubeState::ENTERING)
 	{
 		if(sprite->animation() != (facingRight ? STAND_RIGHT : STAND_LEFT))
@@ -292,7 +342,7 @@ void Player::update(int deltaTime)
    glm::ivec2 warpTile = getFeetTile(posPlayer);
 	int warpTileId = map->getTile(warpTile.x, warpTile.y);
 	bool isWarpTile = warpTileId == TileMap::WARP_TILE_FLOOR || warpTileId == TileMap::WARP_TILE_NO_FLOOR;
-	if(downPressed && !bWarpUsed && isWarpTile)
+ if(downPressed && !bWarpUsed && isWarpTile && doorState == DoorState::NONE && tubeState == TubeState::NONE)
 	{
 		auto warpPairs = map->getWarpPlatformPairs();
 		glm::ivec2 destinationTile = warpTile;
@@ -313,10 +363,12 @@ void Player::update(int deltaTime)
 			}
 		}
 
-		if(foundDestination)
+        if(foundDestination)
 		{
-			posPlayer.x = destinationTile.x * tileSize + (tileSize - playerW) / 2;
-			posPlayer.y = destinationTile.y * tileSize - playerH;
+          warpDestinationPos.x = destinationTile.x * tileSize + (tileSize - playerW) / 2;
+			warpDestinationPos.y = destinationTile.y * tileSize - playerH;
+			warpState = WarpState::DISAPPEARING;
+			warpTimer = WARP_ANIM_DURATION_MS;
 			bWarpUsed = true;
 		}
 	}

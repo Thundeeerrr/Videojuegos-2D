@@ -174,15 +174,20 @@ bool Enemy::canSeeBugs(const glm::ivec2 &bugsTilePos) const
 
 void Enemy::choosePatrolDirection()
 {
-	// Simple random axis direction. Keeps behavior varied without pathfinding.
-	const int r = std::rand() % 4;
-	switch(r)
+	if(map == NULL)
 	{
-		case 0: patrolDir = glm::ivec2(1, 0); break;
-		case 1: patrolDir = glm::ivec2(-1, 0); break;
-		case 2: patrolDir = glm::ivec2(0, 1); break;
-		default: patrolDir = glm::ivec2(0, -1); break;
+		patrolDir = glm::ivec2(1, 0);
+		return;
 	}
+
+	const int maxX = int(map->getMapSize().x) * map->getTileSize() - COLLISION_W_PX;
+
+	if(posEnemy.x <= 0)
+		patrolDir = glm::ivec2(1, 0);
+	else if(posEnemy.x >= maxX)
+		patrolDir = glm::ivec2(-1, 0);
+	else
+		patrolDir = glm::ivec2((std::rand() % 2 == 0) ? 1 : -1, 0);
 }
 
 bool Enemy::moveHorizontal(int dir, int stepPx)

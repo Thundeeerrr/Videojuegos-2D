@@ -20,6 +20,7 @@
     <ClInclude Include="Intro.h" />
     <ClInclude Include="Menu.h" />
     <ClInclude Include="Player.h" />
+    <ClInclude Include="Pushable.h" />
     <ClInclude Include="Scene.h" />
     <ClInclude Include="Shader.h" />
     <ClInclude Include="ShaderProgram.h" />
@@ -27,9 +28,10 @@
     <ClInclude Include="Texture.h" />
     <ClInclude Include="TileMap.h" />
     <ClInclude Include="Key.h" />
-	<ClInclude Include="DonaldEnemy.h" />
-	<ClInclude Include="PiolinEnemy.h" />
-	<ClInclude Include="FrancoEnemy.h" />
+    <ClInclude Include="DonaldEnemy.h" />
+    <ClInclude Include="PiolinEnemy.h" />
+    <ClInclude Include="FrancoEnemy.h" />
+    <ClInclude Include="Utils.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Credits.cpp" />
@@ -41,6 +43,7 @@
     <ClCompile Include="Menu.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Player.cpp" />
+    <ClCompile Include="Pushable.cpp" />
     <ClCompile Include="Scene.cpp" />
     <ClCompile Include="Shader.cpp" />
     <ClCompile Include="ShaderProgram.cpp" />
@@ -48,9 +51,9 @@
     <ClCompile Include="Texture.cpp" />
     <ClCompile Include="TileMap.cpp" />
     <ClCompile Include="Key.cpp" />
-	<ClCompile Include="DonaldEnemy.cpp" />
-	<ClCompile Include="PiolinEnemy.cpp" />
-	<ClCompile Include="FrancoEnemy.cpp" />
+    <ClCompile Include="DonaldEnemy.cpp" />
+    <ClCompile Include="PiolinEnemy.cpp" />
+    <ClCompile Include="FrancoEnemy.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="docs\main_menu.md">

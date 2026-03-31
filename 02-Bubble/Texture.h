@@ -34,6 +34,7 @@ public:
 	void setWrapT(GLint value);
 	void setMinFilter(GLint value);
 	void setMagFilter(GLint value);
+	void setMaxMipmapLevel(GLint value);
 	
 	void use() const;
 	

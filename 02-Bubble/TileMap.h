@@ -40,6 +40,7 @@ public:
 	static const int JUMP_PLATFORM_TILE = 987;
 	static const int DOOR_TILE_STAIRS = 986;
 	static const int DOOR_TILE_NO_STAIRS = 985;
+	static const int WEIGHT_TILE = 984;
 
 	// Tile maps can only be created inside an OpenGL context
 	static TileMap *createTileMap(const string &levelFile, const glm::vec2 &minCoords, ShaderProgram &program);
@@ -67,6 +68,7 @@ public:
 	glm::vec2 getMapSize() const;
 	const vector<glm::ivec2> &getDoorPositions() const { return doorPositions; }
 	const std::unordered_set<glm::ivec2, IVec2Hash>& getKeyPositions() const { return keyPositions; }
+    const vector<glm::ivec2> &getWeightPositions() const { return weightPositions; }
 	void removeKeyAtTile(const glm::ivec2& tilePos);
 	int getTile(int x, int y) const;
 	std::vector<std::pair<glm::ivec2, glm::ivec2>> getWarpPlatformPairs() const;
@@ -97,6 +99,7 @@ private:
 	int *map;
 	set<int> collidedTiles;
 	vector<glm::ivec2> doorPositions;
+   vector<glm::ivec2> weightPositions;
 	vector<TubePair> tubeConnections;
 	vector<glm::ivec2> tubeAlwaysBottomRenderTiles;
 	int stair;

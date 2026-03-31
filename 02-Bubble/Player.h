@@ -29,6 +29,7 @@ public:
 	void setTileMap(TileMap *tileMap);
 	void setPosition(const glm::vec2 &pos);
 	glm::vec2 getPosition() const;
+    glm::ivec2 getSize() const;
   void addKey();
 	int getKeyCount() const;
 	bool isDoorInteractionStarted() const;

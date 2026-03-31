@@ -5,6 +5,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include "Scene.h"
 #include "Game.h"
+#include "Utils.h"
 #include "DonaldEnemy.h"
 #include "PiolinEnemy.h"
 #include "FrancoEnemy.h"
@@ -21,7 +22,7 @@ namespace
 	const int PLAYER_COLLISION_HEIGHT_PX = 16;
 	const int PLAYER_FOOT_OFFSET_Y_PX = PLAYER_COLLISION_HEIGHT_PX;
 	const int PLAYER_FOOT_OFFSET_Y_MINUS_ONE_PX = PLAYER_COLLISION_HEIGHT_PX - 1;
-	const int PLAYER_HEAD_OFFSET_Y_PX = 0;
+  const int PLAYER_HEAD_OFFSET_Y_PX = 0;
 	const int PLAYER_HEAD_OFFSET_Y_MINUS_ONE_PX = -1;
 
 	bool containsDoorTile(const std::vector<glm::ivec2> &tiles, const glm::ivec2 &tile)
@@ -50,8 +51,9 @@ Scene::Scene()
     currentLevelNum = 1;
 	hasReturnPoint = false;
 	returnLevelNum = 1;
-	returnTilePos = glm::ivec2(0);
+  returnTilePos = glm::ivec2(0);
 	godMode = false;
+ weightPushLatch.clear();
 }
 
 Scene::~Scene()
@@ -105,6 +107,15 @@ void Scene::init(const std::string &sceneName)
 		key->init(*it, texProgram);
 		keys.push_back(key);
 	}
+  const std::vector<glm::ivec2> &weightTiles = map->getWeightPositions();
+	for(int i=0; i<int(weightTiles.size()); ++i)
+	{
+		glm::ivec2 weightWorld(weightTiles[i].x * map->getTileSize(), weightTiles[i].y * map->getTileSize());
+		Pushable *weight = new Pushable();
+		weight->init(weightWorld, texProgram, map);
+		weights.push_back(weight);
+	}
+  weightPushLatch.assign(weights.size(), false);
 	player = new Player();
 	player->init(glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
 	for (int i = 0; i < 1; ++i)
@@ -195,7 +206,37 @@ void Scene::update(int deltaTime)
 
 	for(int i=0; i<int(doors.size()); ++i)
 		doors[i]->update(deltaTime);
-	player->update(deltaTime);
+  player->update(deltaTime);
+	bool leftPressed = Game::instance().getKey(GLFW_KEY_LEFT);
+	bool rightPressed = Game::instance().getKey(GLFW_KEY_RIGHT);
+    bool pushInputPressed = leftPressed || rightPressed;
+	for(int i=0; i<int(weights.size()); ++i)
+	{
+      if(i >= int(weightPushLatch.size()))
+			weightPushLatch.push_back(false);
+
+		weights[i]->update(deltaTime);
+        bool collidingWithPlayer = false;
+		if(weights[i]->isOnGround())
+		{
+           glm::vec2 playerPos = player->getPosition();
+			glm::ivec2 playerSize = player->getSize();
+			collidingWithPlayer = collidesWith(playerPos, playerSize, weights[i]->getPosition(), weights[i]->getSize());
+			if(collidingWithPlayer && pushInputPressed && !weightPushLatch[i])
+			{
+                float playerCenter = playerPos.x + playerSize.x / 2.f;
+				float weightCenter = weights[i]->getPosition().x + weights[i]->getSize().x / 2.f;
+				if(rightPressed && playerCenter < weightCenter)
+					weights[i]->push(1);
+				else if(leftPressed && playerCenter > weightCenter)
+					weights[i]->push(-1);
+			}
+		}
+      if(!pushInputPressed || !collidingWithPlayer)
+			weightPushLatch[i] = false;
+		else
+			weightPushLatch[i] = true;
+	}
 
 	glm::vec2 playerPos = player->getPosition();
 	glm::ivec2 playerTilePos((int(playerPos.x) + 8) / map->getTileSize(),(int(playerPos.y) + 15) / map->getTileSize());
@@ -336,6 +377,8 @@ void Scene::render()
 		doors[i]->render();
    for(int i=0; i<int(keys.size()); ++i)
 		keys[i]->render();
+   for(int i=0; i<int(weights.size()); ++i)
+		weights[i]->render();
 	player->render();
    for (int i = 0; i < int(Enemies.size()); ++i)
 		Enemies[i]->render();
@@ -403,7 +446,7 @@ void Scene::giveAllKeys()
 
 void Scene::loadLevel(int levelNum)
 {
-	if(map != NULL)
+ if(map != NULL)
 	{
 		delete map;
 		map = NULL;
@@ -413,6 +456,9 @@ void Scene::loadLevel(int levelNum)
 		delete player;
 		player = NULL;
 	}
+	for(int i=0; i<int(weights.size()); ++i)
+		delete weights[i];
+	weights.clear();
 
 	if(levelNum == 0)
 	{

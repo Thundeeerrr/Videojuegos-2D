@@ -638,6 +638,11 @@ glm::vec2 Player::getPosition() const
  return glm::vec2(float(posPlayer.x), float(posPlayer.y));
 }
 
+glm::ivec2 Player::getSize() const
+{
+	return glm::ivec2(16, 16);
+}
+
 void Player::addKey()
 {
 	++keyCount;

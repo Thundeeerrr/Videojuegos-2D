@@ -11,6 +11,7 @@
 #include "Door.h"
 #include "Key.h"
 #include "Enemy.h"
+#include "Pushable.h"
 
 // Scene contains all the entities of our game.
 // It is responsible for updating and render them.
@@ -44,6 +45,7 @@ private:
 	Player *player;
    std::vector<Door*> doors;
    std::vector<Key*> keys;
+    std::vector<Pushable*> weights;
 	ShaderProgram texProgram;
 	float currentTime;
 	glm::mat4 projection;
@@ -60,6 +62,7 @@ private:
 	std::map<int, std::vector<glm::ivec2> > openedDoorsByLevel;
 	vector<Enemy*> Enemies;
 	bool godMode;
+ std::vector<bool> weightPushLatch;
 };
 
 

@@ -26,6 +26,7 @@ namespace
    const int LEVEL05_TUBE_TOP_RENDER_TILE_ID = 196;
 	const int LEVEL05_TUBE_BOTTOM_RENDER_TILE_ID = 154;
 	const int TILE_KEY = 998;
+  const int TILE_WEIGHT_BACKGROUND = 53;
 	const int TILE_BOMB = 989;
    const int WARP_TILE_FLOOR_RENDER_ID = 193;
 	const int WARP_TILE_NO_FLOOR_RENDER_ID = 37;
@@ -154,6 +155,7 @@ bool TileMap::loadLevel(const string &levelFile)
  vector<glm::ivec2> tubeDTopTiles;
 	vector<glm::ivec2> tubeDBottomTiles;
 	keyPositions.clear();
+ weightPositions.clear();
 	getline(fin, line);
 	sstream.clear();
 	sstream.str(line);
@@ -233,6 +235,11 @@ bool TileMap::loadLevel(const string &levelFile)
 			{
 				keyPositions.insert(glm::ivec2(i, j));
 				map[j * mapSize.x + i] = 53;
+			}
+            else if(tileId == WEIGHT_TILE)
+			{
+				weightPositions.push_back(glm::ivec2(i, j));
+             map[j * mapSize.x + i] = TILE_WEIGHT_BACKGROUND;
 			}
 			else
 				map[j * mapSize.x + i] = tileId;

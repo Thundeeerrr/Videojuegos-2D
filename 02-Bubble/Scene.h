@@ -74,6 +74,7 @@ private:
 	int returnLevelNum;
 	glm::ivec2 returnTilePos;
 	std::map<int, std::vector<glm::ivec2> > openedDoorsByLevel;
+	std::map<int, std::vector<glm::ivec2> > collectedRoomKeys;
 	vector<Enemy*> Enemies;
 	bool godMode;
  std::vector<bool> weightPushLatch;

@@ -548,6 +548,11 @@ void Scene::update(int deltaTime)
 			map->removeKeyAtTile(keys[i]->getTilePos());
 			delete keys[i];
 			keys.erase(keys.begin() + i);
+			if (currentLevelNum == 0 && hasReturnPoint)
+			{
+				if (!containsDoorTile(collectedRoomKeys[returnLevelNum], returnTilePos))
+					collectedRoomKeys[returnLevelNum].push_back(returnTilePos);
+			}
 		}
 		else
 			++i;
@@ -849,6 +854,7 @@ void Scene::resetForNewGame()
 	pWasPressed = false;
 	hWasPressed = false;
 	openedDoorsByLevel.clear();
+	collectedRoomKeys.clear();
 	hasReturnPoint = false;
 	hasSpawnOverride = false;
 	hasDoorTarget = false;
@@ -894,7 +900,8 @@ void Scene::loadLevel(int levelNum)
 	if(levelNum == 0)
 	{
      currentLevelNum = 0;
-		init("levels/KeyRoom.txt");
+	 if (hasReturnPoint && containsDoorTile(collectedRoomKeys[returnLevelNum], returnTilePos))	init("levels/KeyRoom_collected.txt");
+	 else init("levels/KeyRoom.txt");
 		return;
 	}
 	if(levelNum < 1)

@@ -107,6 +107,8 @@ private:
 	int stair;
 	std::unordered_set<glm::ivec2, IVec2Hash> keyPositions;
   std::unordered_map<int, int> doorLinks;
+  int neededKeys;
+  int totalKeys;
 };
 
 

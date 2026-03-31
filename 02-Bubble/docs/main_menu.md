@@ -223,7 +223,8 @@ Implement the `Menu` class:
 
 **`keyPressed(key)`:**
 - `GLFW_KEY_DOWN` → `selectedOption = (selectedOption + 1) % NUM_OPTIONS`
-- `GLFW_KEY_UP` → `selectedOption = (selectedOption + NUM_OPTIONS - 1) % NUM_OPTIONS`
+- `
+- ` → `selectedOption = (selectedOption + NUM_OPTIONS - 1) % NUM_OPTIONS`
 - `GLFW_KEY_ENTER` or `GLFW_KEY_KP_ENTER`:
   - option 0 → `Game::instance().changeState(STATE_PLAYING)`
   - option 1 → `Game::instance().changeState(STATE_INSTRUCTIONS)`

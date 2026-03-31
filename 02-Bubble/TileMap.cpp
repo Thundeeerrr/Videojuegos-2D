@@ -236,7 +236,7 @@ bool TileMap::loadLevel(const string &levelFile)
             else if(tileId == TILE_KEY)
 			{
 				keyPositions.insert(glm::ivec2(i, j));
-				map[j * mapSize.x + i] = 53;
+				map[j * mapSize.x + i] = map[j * mapSize.x + i - 1];
 			}
             else if(tileId == WEIGHT_TILE)
 			{

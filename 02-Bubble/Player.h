@@ -61,6 +61,7 @@ private:
 	glm::ivec2 doorTeleportStartPos;
 	glm::ivec2 doorTeleportTargetPos;
 	glm::ivec2 doorTeleportExitStartPos;
+  bool doorTeleportExitFromTop;
 	glm::ivec2 doorTeleportDestinationPos;
 	TubeState tubeState;
 	int tubeTimer;

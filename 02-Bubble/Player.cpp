@@ -74,6 +74,7 @@ void Player::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 	doorTeleportStartPos = glm::ivec2(0);
 	doorTeleportTargetPos = glm::ivec2(0);
 	doorTeleportExitStartPos = glm::ivec2(0);
+ doorTeleportExitFromTop = false;
 	doorTeleportDestinationPos = glm::ivec2(0);
     tubeState = TubeState::NONE;
 	tubeTimer = 0;
@@ -526,9 +527,20 @@ void Player::update(int deltaTime)
 			doorTeleportTargetPos = glm::ivec2(
 				playerTile.x * tileSize,
 				playerTile.y * tileSize);
-			doorTeleportExitStartPos = glm::ivec2(
-				destinationTile.x * tileSize,
-				destinationTile.y * tileSize - playerH + tileSize + DOOR_TELEPORT_EXIT_OFFSET_PX);
+          int destinationTileId = map->getTile(destinationTile.x, destinationTile.y);
+			doorTeleportExitFromTop = destinationTileId == TileMap::DOOR_TILE_STAIRS;
+			if(doorTeleportExitFromTop)
+			{
+				doorTeleportExitStartPos = glm::ivec2(
+					destinationTile.x * tileSize,
+					destinationTile.y * tileSize - playerH + tileSize - DOOR_TELEPORT_EXIT_OFFSET_PX);
+			}
+			else
+			{
+				doorTeleportExitStartPos = glm::ivec2(
+					destinationTile.x * tileSize,
+					destinationTile.y * tileSize - playerH + tileSize + DOOR_TELEPORT_EXIT_OFFSET_PX);
+			}
 			doorTeleportState = DoorTeleportState::ENTERING;
            doorTeleportTimer = DOOR_TELEPORT_ANIM_DURATION_MS;
 			doorTeleportDuration = DOOR_TELEPORT_ANIM_DURATION_MS;

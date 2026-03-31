@@ -106,6 +106,7 @@ void Player::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 	deathFinished = false;
 	deathTimerMs = 0;
  shieldActive = false;
+ godModeShieldVisual = false;
     jumpPlatformPosY = 0.f;
 	//spritesheet.loadFromFile("images/bub.png", TEXTURE_PIXEL_FORMAT_RGBA);
 	spritesheet.loadFromFile("images/BugsBunny-Sprites.png", TEXTURE_PIXEL_FORMAT_RGBA);
@@ -681,7 +682,7 @@ void Player::render()
 		sprite->setLocalTransform(glm::mat4(1.0f));
 
 	sprite->render();
- if(shieldActive)
+   if(shieldActive || godModeShieldVisual)
 		shieldSprite->render();
 	glm::vec2 healthPos = glm::vec2(0.0f, 0.0f);
 	for (int i = 0; i < health; i++)
@@ -826,6 +827,11 @@ void Player::consumeShield()
 bool Player::hasShield() const
 {
 	return shieldActive;
+}
+
+void Player::setGodModeShieldVisual(bool enabled)
+{
+	godModeShieldVisual = enabled;
 }
 
 

@@ -282,6 +282,7 @@ void Scene::init(const std::string &sceneName)
 	player = new Player();
 	player->init(glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
  player->setLives(remainingLives);
+ player->setGodModeShieldVisual(godMode);
 	for (int i = 0; i < 1; ++i)
 	{
 		cout << "Initializing enemy " << i << endl;
@@ -916,6 +917,8 @@ void Scene::initShaders()
 void Scene::toggleGodMode()
 {
 	godMode = !godMode;
+   if(player != NULL)
+		player->setGodModeShieldVisual(godMode);
 }
 
 void Scene::giveAllKeys()

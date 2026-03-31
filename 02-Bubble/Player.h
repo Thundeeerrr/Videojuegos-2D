@@ -50,6 +50,7 @@ public:
 	void activateShield();
 	void consumeShield();
 	bool hasShield() const;
+	void setGodModeShieldVisual(bool enabled);
 	
 private:
 	bool bJumping;
@@ -88,6 +89,7 @@ private:
 	bool deathFinished;
 	int deathTimerMs;
    bool shieldActive;
+   bool godModeShieldVisual;
  static const int TUBE_ENTER_TIME = 1000;
 	static const int TUBE_EXIT_TIME = 400;
     static constexpr float JUMP_PLATFORM_GRAVITY = 0.1f;

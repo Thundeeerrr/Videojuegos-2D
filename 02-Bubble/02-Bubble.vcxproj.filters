@@ -57,9 +57,18 @@
     <ClInclude Include="Door.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-	<ClInclude Include="Key.h">
-	  <Filter>Archivos de encabezado</Filter>
-	</ClInclude>
+    <ClInclude Include="Key.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+	<ClInclude Include="DonaldEnemy.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+	<ClInclude Include="PiolinEnemy.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+	<ClInclude Include="FrancoEnemy.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Game.cpp">
@@ -104,15 +113,21 @@
     <ClCompile Include="Door.cpp">
       <Filter>Archivos de código fuente</Filter>
     </ClCompile>
-	<ClCompile Include="Key.cpp">
-	  <Filter>Archivos de código fuente</Filter>
-	</ClCompile>
+    <ClCompile Include="Key.cpp">
+      <Filter>Archivos de código fuente</Filter>
+    </ClCompile>
+	<ClCompile Include="DonaldEnemy.cpp">
+      <Filter>Archivos de código fuente</Filter>
+    </ClCompile>
+	<ClCompile Include="PiolinEnemy.cpp">
+      <Filter>Archivos de código fuente</Filter>
+    </ClCompile>
+	<ClCompile Include="FrancoEnemy.cpp">
+      <Filter>Archivos de código fuente</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="docs\main_menu.md" />
-    <None Include="..\..\..\..\..\Users\zihen\Downloads\BugsBunnyCrazyCastle3-Stage1_v2.png">
-      <Filter>Archivos de recursos</Filter>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <Text Include="levels\level02.txt" />

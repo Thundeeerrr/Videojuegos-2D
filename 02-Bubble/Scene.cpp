@@ -5,7 +5,9 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include "Scene.h"
 #include "Game.h"
-
+#include "DonaldEnemy.h"
+#include "PiolinEnemy.h"
+#include "FrancoEnemy.h"
 
 #define SCREEN_X 0
 #define SCREEN_Y 0
@@ -109,8 +111,8 @@ void Scene::init(const std::string &sceneName)
 	{
 		cout << "Initializing enemy " << i << endl;
 		if (currentLevelNum == 0)	break;
-		Enemies.push_back(new Enemy());
-		Enemies[i]->init(Enemy::Type::DONALD, glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
+		Enemies.push_back(new DonaldEnemy());
+		Enemies[i]->init(glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
 		Enemies[i]->setTileMap(map);
 	}
     bool shouldPlayDoorExitAnimation = false;

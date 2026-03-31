@@ -55,7 +55,8 @@ public:
 	bool collisionMoveRight(const glm::ivec2 &pos, const glm::ivec2 &size) const;
 	bool collisionMoveDown(const glm::ivec2 &pos, const glm::ivec2 &size, int *posY) const;
   bool collisionMoveUp(const glm::ivec2 &pos, const glm::ivec2 &size, int *posY) const;
-	bool isStairTile(const glm::ivec2& pos) const;
+	bool isStairTileForBody(const glm::ivec2 &pos, const glm::ivec2 &size) const;
+	bool isStairTile(const glm::ivec2& pos) const; // keep for Player compatibility
     bool isDoorTile(const glm::ivec2 &tilePos) const;
    bool isTubeTile(const glm::ivec2 &pos, bool topVariant) const;
 	glm::ivec2 getTubeExit(const glm::ivec2 &entryTile) const;

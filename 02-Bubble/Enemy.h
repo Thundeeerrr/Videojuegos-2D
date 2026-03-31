@@ -5,17 +5,18 @@
 #include "Sprite.h"
 #include "TileMap.h"
 
+
 class Enemy
 {
 public:
-	enum class Type { DONALD, PIOLIN };
+	enum class Type { DONALD, PIOLIN, FRANCO };
 	enum class State { PATROL, CHASE, SEARCH };
 
 public:
 	Enemy();
-	~Enemy();
+	virtual ~Enemy();
 
-	void init(Type type, const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram);
+	void init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram);
 	void update(int deltaTime, const glm::vec2 &bugsWorldPos);
 	void render();
 
@@ -24,23 +25,40 @@ public:
 	glm::vec2 getPosition() const;
 
 	State getState() const { return state; }
-	Type getType() const { return enemyType; }
+	virtual Type getType() const = 0;
 
-private:
+protected:
+	// Subclass responsibilities
+	virtual const char* getTextureFile() const = 0;
+	virtual glm::ivec2 getFrameSizePx() const = 0;
+	virtual void configureAnimations(float texW, float texH) = 0;
+	virtual void stepAI(int deltaTime, const glm::ivec2 &bugsTilePos) = 0;
+	virtual int getVisionRangeTiles() const { return DEFAULT_VISION_RANGE_TILES; }
+	virtual int getSearchDurationMs() const { return DEFAULT_SEARCH_DURATION_MS; }
+
+	// Shared helpers for subclasses
 	bool canSeeBugs(const glm::ivec2 &bugsTilePos) const;
-	void choosePatrolDirection();
-	void stepAI(int deltaTime, const glm::ivec2 &bugsTilePos);
+	void patrolStep(int stepPx = MOVE_STEP_PX);
 	bool moveHorizontal(int dir, int stepPx);
 	void moveVertical(int dir, int stepPx);
+	glm::ivec2 getMyTile() const;
+	void pickPatrolDirection();
 
-	glm::ivec2 worldToTileCenterFoot(const glm::vec2 &worldPos) const;
+	void setState(State s) { state = s; }
+	void setSearchTimerMs(int ms) { searchTimerMs = ms; }
+	int getSearchTimerMs() const { return searchTimerMs; }
+	void setLastSeenBugsTile(const glm::ivec2 &t) { lastSeenBugsTile = t; }
+	glm::ivec2 getLastSeenBugsTile() const { return lastSeenBugsTile; }
 
-private:
-	Type enemyType;
-	State state;
+	enum EnemyAnims { STAND = 0, WALK = 1 };
 
-	glm::ivec2 tileMapDispl;
-	glm::ivec2 posEnemy;
+protected:
+	static const int COLLISION_W_PX = 16;
+	static const int COLLISION_H_PX = 16;
+	static const int MOVE_STEP_PX = 1;
+	static const int FALL_STEP_PX = 2;
+	static const int DEFAULT_VISION_RANGE_TILES = 10;
+	static const int DEFAULT_SEARCH_DURATION_MS = 1200;
 
 	Texture spritesheet;
 	Sprite *sprite;
@@ -49,33 +67,20 @@ private:
 	bool facingRight;
 	glm::ivec2 patrolDir;
 
-	int searchTimerMs;
-	glm::ivec2 lastSeenBugsTile;
-
-	// Collision/visual constants (kept consistent with Player: 16x16 collision footprint)
-	static const int COLLISION_W_PX = 16;
-	static const int COLLISION_H_PX = 16;
-
-	// How fast enemies move (px/frame step style, like Player uses 2px)
-	// 2 px per update keeps movement consistent with Player::update().
-	static const int MOVE_STEP_PX = 1;
-	static const int FALL_STEP_PX = 2;
-	// How far (in tiles) an enemy is allowed to "see" along a straight line.
-	// This avoids enemies tracking across the entire map through corridors.
-	static const int VISION_RANGE_TILES = 10;
-
-	// How long enemy stays in SEARCH after losing line-of-sight.
-	static const int SEARCH_DURATION_MS = 1200;
-
-	static const int SPRITE_W_PX = 16;
-	static const int SPRITE_H_PX = 24;
-
-	// Enemy speed in pixels per second (tune this)
-	static const float MOVE_SPEED_PX_PER_SEC;
-
-	// Actual frame size derived from spritesheet
 	int frameWidthPx;
 	int frameHeightPx;
+
+private:
+	void choosePatrolDirection();
+	glm::ivec2 worldToTileCenterFoot(const glm::vec2 &worldPos) const;
+
+private:
+	State state;
+	glm::ivec2 tileMapDispl;
+	glm::ivec2 posEnemy;
+
+	int searchTimerMs;
+	glm::ivec2 lastSeenBugsTile;
 };
 
 #endif // _ENEMY_INCLUDE

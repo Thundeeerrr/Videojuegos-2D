@@ -103,7 +103,8 @@ The `Scene scene` and `bool keys[GLFW_KEY_LAST+1]` members already exist — do 
 
 Replace the entire file content with the following logic:
 
-- `init()`: set `currentState = STATE_MENU`, call `menu.init()`. Do NOT call `scene.init()` here.
+- `init()`: set `current
+- STATE_MENU`, call `menu.init()`. Do NOT call `scene.init()` here.
 - `update(deltaTime)`: dispatch to `menu.update(deltaTime)` or `scene.update(deltaTime)` based on `currentState`.
 - `render()`: `glClear`, then dispatch to `menu.render()` or `scene.render()`.
 - `keyPressed(key)`:

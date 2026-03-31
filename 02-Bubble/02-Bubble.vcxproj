@@ -27,6 +27,9 @@
     <ClInclude Include="Texture.h" />
     <ClInclude Include="TileMap.h" />
     <ClInclude Include="Key.h" />
+	<ClInclude Include="DonaldEnemy.h" />
+	<ClInclude Include="PiolinEnemy.h" />
+	<ClInclude Include="FrancoEnemy.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Credits.cpp" />
@@ -45,6 +48,9 @@
     <ClCompile Include="Texture.cpp" />
     <ClCompile Include="TileMap.cpp" />
     <ClCompile Include="Key.cpp" />
+	<ClCompile Include="DonaldEnemy.cpp" />
+	<ClCompile Include="PiolinEnemy.cpp" />
+	<ClCompile Include="FrancoEnemy.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="docs\main_menu.md">

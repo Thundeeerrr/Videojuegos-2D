@@ -462,23 +462,26 @@ bool TileMap::collisionMoveDown(const glm::ivec2 &pos, const glm::ivec2 &size, i
 	return false;
 }
 
-bool TileMap::isStairTile(const glm::ivec2& pos) const
+bool TileMap::isStairTileForBody(const glm::ivec2 &pos, const glm::ivec2 &size) const
 {
-	// Probe point = bottom-center of a 16x16 player.
-	// If you later change player size, refactor these into parameters.
-	const int playerW = 16;
-	const int playerH = 16;
-
-	const int probeX = pos.x + playerW / 2;
-	const int probeY0 = pos.y + playerH;
-	const int probeY1 = pos.y + playerH - 1;
+	const int probeX = pos.x + (size.x / 2);
+	const int probeY0 = pos.y + size.y;
+	const int probeY1 = pos.y + size.y - 1;
 
 	const int x = probeX / tileSize;
 	const int y0 = probeY0 / tileSize;
 	const int y1 = probeY1 / tileSize;
 
+	if(x < 0 || x >= mapSize.x || y0 < 0 || y0 >= mapSize.y || y1 < 0 || y1 >= mapSize.y)
+		return false;
 
 	return map[y0 * mapSize.x + x] == stair || map[y1 * mapSize.x + x] == stair;
+}
+
+bool TileMap::isStairTile(const glm::ivec2& pos) const
+{
+	// legacy player wrapper
+	return isStairTileForBody(pos, glm::ivec2(16, 16));
 }
 
 bool TileMap::isDoorTile(const glm::ivec2 &tilePos) const
@@ -663,27 +666,3 @@ glm::ivec2 TileMap::decodeTile(int key) const
 {
 	return glm::ivec2(key % mapSize.x, key / mapSize.x);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

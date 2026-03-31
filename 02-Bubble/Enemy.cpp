@@ -1,21 +1,12 @@
 #include <cstdlib>
 #include <cmath>
-#include "Enemy.h"
 #include <iostream>
+#include "Enemy.h"
 #include "Game.h"
 #include <glm/gtc/matrix_transform.hpp>
 
-const float Enemy::MOVE_SPEED_PX_PER_SEC = 48.f;
 namespace
 {
-	// Sprite sheet / animation indices are placeholders.
-	// Keep them here so you can later map them to your actual enemy spritesheet.
-	enum EnemyAnims
-	{
-		STAND, WALK
-	};
-
-	// Convert a tile delta to a cardinal direction vector (-1/0/1).
 	int signInt(int v)
 	{
 		if(v < 0) return -1;
@@ -33,6 +24,8 @@ Enemy::Enemy()
 	patrolDir = glm::ivec2(1, 0);
 	searchTimerMs = 0;
 	lastSeenBugsTile = glm::ivec2(0);
+	frameWidthPx = 16;
+	frameHeightPx = 16;
 }
 
 Enemy::~Enemy()
@@ -41,31 +34,17 @@ Enemy::~Enemy()
 		delete sprite;
 }
 
-void Enemy::init(Type type, const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
+void Enemy::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 {
-	enemyType = type;
 	state = State::PATROL;
 	tileMapDispl = tileMapPos;
 	searchTimerMs = 0;
 
-	string textureFile;
-	int sheetCols = 0;
-	int sheetRows = 0;
+	const glm::ivec2 frameSize = getFrameSizePx();
+	frameWidthPx = frameSize.x;
+	frameHeightPx = frameSize.y;
 
-	if(type == Type::DONALD)
-	{
-		textureFile = "images/PatoDonald-Sprites.png";
-		frameWidthPx = 16;
-		frameHeightPx = 32;
-	}
-	else
-	{
-		textureFile = "images/Piolin-Sprites.png";
-		frameWidthPx = 12;
-		frameHeightPx = 8;
-	}
-
-	spritesheet.loadFromFile(textureFile, TEXTURE_PIXEL_FORMAT_RGBA);
+	spritesheet.loadFromFile(getTextureFile(), TEXTURE_PIXEL_FORMAT_RGBA);
 	spritesheet.setWrapS(GL_CLAMP_TO_EDGE);
 	spritesheet.setWrapT(GL_CLAMP_TO_EDGE);
 	spritesheet.setMinFilter(GL_NEAREST);
@@ -84,23 +63,7 @@ void Enemy::init(Type type, const glm::ivec2 &tileMapPos, ShaderProgram &shaderP
 		&shaderProgram);
 
 	sprite->setNumberAnimations(2);
-
-	auto uv = [&](int col, int row) -> glm::vec2
-	{
-		const float u = (float(col) * float(frameWidthPx)) / texW;
-		const float v = (float(row) * float(frameHeightPx)) / texH;
-		return glm::vec2(u, v);
-	};
-
-	sprite->setAnimationSpeed(STAND, 8);
-	sprite->addKeyframe(STAND, uv(0, 0));
-
-	sprite->setAnimationSpeed(WALK, 8);
-	sprite->addKeyframe(WALK, uv(1, 0));
-	sprite->addKeyframe(WALK, uv(2, 0));
-	sprite->addKeyframe(WALK, uv(3, 0));
-	sprite->addKeyframe(WALK, uv(4, 0));
-
+	configureAnimations(texW, texH);
 	sprite->changeAnimation(STAND);
 
 	choosePatrolDirection();
@@ -136,17 +99,19 @@ void Enemy::render()
 		sprite->setLocalTransform(local);
 	}
 	else
-	{
 		sprite->setLocalTransform(glm::mat4(1.0f));
-	}
 
 	sprite->render();
 }
 
 glm::ivec2 Enemy::worldToTileCenterFoot(const glm::vec2 &worldPos) const
 {
-	// Uses the same probe idea as Scene uses for player: (x+8, y+15) for a 16x16 collider.
 	return map->worldToTile(worldPos + glm::vec2(8.f, 15.f));
+}
+
+glm::ivec2 Enemy::getMyTile() const
+{
+	return worldToTileCenterFoot(getPosition());
 }
 
 bool Enemy::canSeeBugs(const glm::ivec2 &bugsTilePos) const
@@ -154,21 +119,17 @@ bool Enemy::canSeeBugs(const glm::ivec2 &bugsTilePos) const
 	if(map == NULL)
 		return false;
 
-	glm::ivec2 myTile = worldToTileCenterFoot(getPosition());
-
+	const glm::ivec2 myTile = getMyTile();
 	const int dx = bugsTilePos.x - myTile.x;
 	const int dy = bugsTilePos.y - myTile.y;
 
-	// Only straight-line detection (same row or same column)
 	if(dx != 0 && dy != 0)
 		return false;
 
 	const int dist = std::abs(dx) + std::abs(dy);
-	if(dist > VISION_RANGE_TILES)
+	if(dist > getVisionRangeTiles())
 		return false;
 
-	// No wall-blocking yet (since isSolidTile() doesn't exist).
-	// This can be upgraded later to stop vision through solid tiles.
 	return true;
 }
 
@@ -181,13 +142,29 @@ void Enemy::choosePatrolDirection()
 	}
 
 	const int maxX = int(map->getMapSize().x) * map->getTileSize() - COLLISION_W_PX;
+	if(posEnemy.x <= 0) patrolDir = glm::ivec2(1, 0);
+	else if(posEnemy.x >= maxX) patrolDir = glm::ivec2(-1, 0);
+	else patrolDir = glm::ivec2((std::rand() % 2 == 0) ? 1 : -1, 0);
+}
 
-	if(posEnemy.x <= 0)
-		patrolDir = glm::ivec2(1, 0);
-	else if(posEnemy.x >= maxX)
-		patrolDir = glm::ivec2(-1, 0);
+void Enemy::pickPatrolDirection()
+{
+	choosePatrolDirection();
+}
+
+void Enemy::patrolStep(int stepPx)
+{
+	if(patrolDir.x != 0)
+	{
+		const bool blocked = moveHorizontal(patrolDir.x, stepPx);
+		if(blocked) patrolDir.x = -patrolDir.x;
+	}
 	else
-		patrolDir = glm::ivec2((std::rand() % 2 == 0) ? 1 : -1, 0);
+	{
+		const int prevY = posEnemy.y;
+		moveVertical(patrolDir.y, stepPx);
+		if(posEnemy.y == prevY) choosePatrolDirection();
+	}
 }
 
 bool Enemy::moveHorizontal(int dir, int stepPx)
@@ -204,33 +181,20 @@ bool Enemy::moveHorizontal(int dir, int stepPx)
 	posEnemy.x += dir * stepPx;
 
 	bool blocked = false;
+	if(posEnemy.x < minX) { posEnemy.x = minX; blocked = true; }
+	else if(posEnemy.x > maxX) { posEnemy.x = maxX; blocked = true; }
 
-	if(posEnemy.x < minX)
-	{
-		posEnemy.x = minX;
-		blocked = true;
-	}
-	else if(posEnemy.x > maxX)
-	{
-		posEnemy.x = maxX;
-		blocked = true;
-	}
-
-	// If you later add real tile collision, keep this:
 	if(!blocked)
 	{
 		if(dir < 0 && map->collisionMoveLeft(posEnemy, glm::ivec2(COLLISION_W_PX, COLLISION_H_PX)))
 		{
-			posEnemy.x = prevX;
-			blocked = true;
+			posEnemy.x = prevX; blocked = true;
 		}
 		else if(dir > 0 && map->collisionMoveRight(posEnemy, glm::ivec2(COLLISION_W_PX, COLLISION_H_PX)))
 		{
-			posEnemy.x = prevX;
-			blocked = true;
+			posEnemy.x = prevX; blocked = true;
 		}
 	}
-
 	return blocked;
 }
 
@@ -240,85 +204,19 @@ void Enemy::moveVertical(int dir, int stepPx)
 		return;
 
 	posEnemy.y += dir * stepPx;
-
 	int correctedY = posEnemy.y;
-	if(map->collisionMoveDown(posEnemy, glm::ivec2(COLLISION_W_PX, COLLISION_H_PX), &correctedY))
-		posEnemy.y = correctedY;
-}
 
-void Enemy::stepAI(int deltaTime, const glm::ivec2 &bugsTilePos)
-{
-	const glm::ivec2 myTile = worldToTileCenterFoot(getPosition());
-	const int stepPx = MOVE_STEP_PX;
-
-	switch(state)
+	if(dir < 0)
 	{
-		case State::PATROL:
-		{
-			if(patrolDir.x != 0)
-			{
-				const bool blocked = moveHorizontal(patrolDir.x, stepPx);
-				if(blocked)
-					patrolDir.x = -patrolDir.x;
-			}
-			else
-			{
-				const int prevY = posEnemy.y;
-				moveVertical(patrolDir.y, stepPx);
-				if(posEnemy.y == prevY)
-					choosePatrolDirection();
-			}
-			break;
-		}
-
-		case State::CHASE:
-		{
-			if(canSeeBugs(bugsTilePos))
-			{
-				lastSeenBugsTile = bugsTilePos;
-				searchTimerMs = 0;
-			}
-			else
-			{
-				state = State::SEARCH;
-				searchTimerMs = SEARCH_DURATION_MS;
-			}
-
-			const int dx = bugsTilePos.x - myTile.x;
-			const int dy = bugsTilePos.y - myTile.y;
-
-			if(std::abs(dx) >= std::abs(dy)) moveHorizontal(signInt(dx), stepPx);
-			else                             moveVertical(signInt(dy), stepPx);
-
-			break;
-		}
-
-		case State::SEARCH:
-		{
-			if(canSeeBugs(bugsTilePos))
-			{
-				state = State::CHASE;
-				lastSeenBugsTile = bugsTilePos;
-				searchTimerMs = 0;
-				break;
-			}
-
-			searchTimerMs -= deltaTime;
-			if(searchTimerMs <= 0)
-			{
-				state = State::PATROL;
-				choosePatrolDirection();
-				break;
-			}
-
-			const int dx = lastSeenBugsTile.x - myTile.x;
-			const int dy = lastSeenBugsTile.y - myTile.y;
-
-			if(std::abs(dx) >= std::abs(dy)) moveHorizontal(signInt(dx), stepPx);
-			else                             moveVertical(signInt(dy), stepPx);
-
-			break;
-		}
+		// Moving up -> use ceiling collision
+		if(map->collisionMoveUp(posEnemy, glm::ivec2(COLLISION_W_PX, COLLISION_H_PX), &correctedY))
+			posEnemy.y = correctedY;
+	}
+	else
+	{
+		// Moving down -> use floor collision
+		if(map->collisionMoveDown(posEnemy, glm::ivec2(COLLISION_W_PX, COLLISION_H_PX), &correctedY))
+			posEnemy.y = correctedY;
 	}
 }
 
@@ -329,32 +227,45 @@ void Enemy::update(int deltaTime, const glm::vec2 &bugsWorldPos)
 
 	sprite->update(deltaTime);
 
-	// Gravity (time-based)
+	const bool onClimbable = map->isStairTileForBody(
+		posEnemy,
+		glm::ivec2(COLLISION_W_PX, COLLISION_H_PX));
+
+	// Apply gravity only when not on vine/stair.
+	// Reasoning: climbing step is MOVE_STEP_PX=1 while gravity is FALL_STEP_PX=2,
+	// so gravity must be gated or upward movement is canceled.
+	if(!onClimbable)
 	{
+		const int footProbeMarginPx = COLLISION_W_PX / 4;
+		const glm::ivec2 feetProbeSize(COLLISION_W_PX - (2 * footProbeMarginPx), COLLISION_H_PX);
+
 		posEnemy.y += FALL_STEP_PX;
-		map->collisionMoveDown(posEnemy, glm::ivec2(COLLISION_W_PX, COLLISION_H_PX), &posEnemy.y);
+
+		glm::ivec2 probePos = posEnemy;
+		probePos.x += footProbeMarginPx;
+
+		int correctedY = posEnemy.y;
+		if(map->collisionMoveDown(probePos, feetProbeSize, &correctedY))
+			posEnemy.y = correctedY;
 	}
 
 	const glm::ivec2 bugsTile = worldToTileCenterFoot(bugsWorldPos);
-
 	const glm::ivec2 prevPos = posEnemy;
-	stepAI(deltaTime, bugsTile);
-	const bool moved = (posEnemy != prevPos);
 
+	stepAI(deltaTime, bugsTile);
+
+	const bool moved = (posEnemy != prevPos);
 	if(moved)
 	{
-		//cout << "[EnemyDebug] Enemy at tile (" << bugsTile.x << "," << bugsTile.y << ") state=" << int(state) << " moved to (" << posEnemy.x << "," << posEnemy.y << ")" << endl;
 		if(sprite->animation() != WALK)
 			sprite->changeAnimation(WALK);
 	}
 	else
 	{
-		cout << "[EnemyDebug] Enemy at tile (" << bugsTile.x << "," << bugsTile.y << ") state=" << int(state) << " searchTimer=" << searchTimerMs << endl;
 		if(sprite->animation() != STAND)
 			sprite->changeAnimation(STAND);
 	}
 
-	// Visual offset so 24px sprite sits on 16px collider feet
 	const int visualOffsetY = COLLISION_H_PX - frameHeightPx;
 	sprite->setPosition(glm::vec2(
 		float(tileMapDispl.x + posEnemy.x),

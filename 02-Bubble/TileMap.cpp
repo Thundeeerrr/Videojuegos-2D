@@ -27,6 +27,8 @@ namespace
 	const int LEVEL05_TUBE_BOTTOM_RENDER_TILE_ID = 154;
 	const int TILE_KEY = 998;
 	const int TILE_BOMB = 989;
+   const int WARP_TILE_FLOOR_RENDER_ID = 193;
+	const int WARP_TILE_NO_FLOOR_RENDER_ID = 37;
 }
 
 
@@ -131,7 +133,7 @@ bool TileMap::loadLevel(const string &levelFile)
 	sstream.clear();
 	sstream.str(line);
 	int numCollidedTiles, cTileId;
-	if (sstream >> numCollidedTiles) 
+   if (sstream >> numCollidedTiles) 
 	{
 		for (int i = 0; i < numCollidedTiles; ++i) 
 		{
@@ -139,6 +141,8 @@ bool TileMap::loadLevel(const string &levelFile)
 			collidedTiles.insert(cTileId);
 		}
 	}
+	collidedTiles.insert(WARP_TILE_FLOOR);
+	collidedTiles.insert(WARP_TILE_NO_FLOOR);
 
 	getline(fin, line);
 	sstream.clear();
@@ -261,8 +265,12 @@ void TileMap::prepareArrays(const glm::vec2 &minCoords, ShaderProgram &program)
 	{
 		for(int i=0; i<mapSize.x; i++)
 		{
-			tile = map[j * mapSize.x + i];
-         int tileToRender = tile;
+          tile = map[j * mapSize.x + i];
+			int tileToRender = tile;
+			if(tile == WARP_TILE_FLOOR)
+				tileToRender = WARP_TILE_FLOOR_RENDER_ID;
+			else if(tile == WARP_TILE_NO_FLOOR)
+				tileToRender = WARP_TILE_NO_FLOOR_RENDER_ID;
 			if(tile == -2)
 			{
 				glm::ivec2 tilePos(i, j);
@@ -380,9 +388,9 @@ bool TileMap::collisionMoveDown(const glm::ivec2 &pos, const glm::ivec2 &size, i
 	bool tryToClimbDown = Game::instance().getKey(GLFW_KEY_DOWN);
 	for(int x=x0; x<=x1; x++)
 	{
-		int tile = map[y * mapSize.x + x];
+      int tile = map[y * mapSize.x + x];
 		if (tryToClimbDown) cout << "Trying to climb down. Checking tile at (" << x << ", " << y << ") with tile ID: " << tile << endl;
-     if(collidedTiles.find(tile) != collidedTiles.end() || tile == -2)
+		if(collidedTiles.find(tile) != collidedTiles.end() || tile == -2)
 		{
 			if (*posY - tileSize * y + size.y <= 4)
 			{
@@ -528,6 +536,35 @@ bool TileMap::isTubeBottomTile(const glm::ivec2 &tilePos) const
 	}
 
 	return false;
+}
+
+int TileMap::getTile(int x, int y) const
+{
+	if(x < 0 || x >= mapSize.x || y < 0 || y >= mapSize.y)
+		return -1;
+
+	return map[y * mapSize.x + x];
+}
+
+std::vector<std::pair<glm::ivec2, glm::ivec2>> TileMap::getWarpPlatformPairs() const
+{
+	std::vector<glm::ivec2> warpTiles;
+	warpTiles.reserve(mapSize.x * mapSize.y);
+	for(int y = 0; y < mapSize.y; ++y)
+	{
+		for(int x = 0; x < mapSize.x; ++x)
+		{
+			int tile = map[y * mapSize.x + x];
+			if(tile == WARP_TILE_FLOOR || tile == WARP_TILE_NO_FLOOR)
+				warpTiles.push_back(glm::ivec2(x, y));
+		}
+	}
+
+	std::vector<std::pair<glm::ivec2, glm::ivec2>> pairs;
+	for(size_t i = 0; i + 1 < warpTiles.size(); i += 2)
+		pairs.push_back(std::make_pair(warpTiles[i], warpTiles[i + 1]));
+
+	return pairs;
 }
 
 bool TileMap::isKeyTile(const glm::ivec2 &pos) const

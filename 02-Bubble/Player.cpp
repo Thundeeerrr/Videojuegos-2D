@@ -279,6 +279,54 @@ void Player::update(int deltaTime)
 		map->collisionMoveDown(posPlayer, glm::ivec2(16, 16), &posPlayer.y);
 	}
 
+	const int playerW = 16;
+	const int playerH = 16;
+	const int tileSize = map->getTileSize();
+   auto getFeetTile = [&](const glm::ivec2 &playerPos) -> glm::ivec2
+	{
+		int probeX = playerPos.x + playerW / 2;
+		int probeY = playerPos.y + playerH;
+		return glm::ivec2(probeX / tileSize, probeY / tileSize);
+	};
+
+   glm::ivec2 warpTile = getFeetTile(posPlayer);
+	int warpTileId = map->getTile(warpTile.x, warpTile.y);
+	bool isWarpTile = warpTileId == TileMap::WARP_TILE_FLOOR || warpTileId == TileMap::WARP_TILE_NO_FLOOR;
+	if(downPressed && !bWarpUsed && isWarpTile)
+	{
+		auto warpPairs = map->getWarpPlatformPairs();
+		glm::ivec2 destinationTile = warpTile;
+		bool foundDestination = false;
+		for(const auto &pair : warpPairs)
+		{
+			if(pair.first == warpTile)
+			{
+				destinationTile = pair.second;
+				foundDestination = true;
+				break;
+			}
+			if(pair.second == warpTile)
+			{
+				destinationTile = pair.first;
+				foundDestination = true;
+				break;
+			}
+		}
+
+		if(foundDestination)
+		{
+			posPlayer.x = destinationTile.x * tileSize + (tileSize - playerW) / 2;
+			posPlayer.y = destinationTile.y * tileSize - playerH;
+			bWarpUsed = true;
+		}
+	}
+
+  glm::ivec2 warpTileAfter = getFeetTile(posPlayer);
+	int warpTileAfterId = map->getTile(warpTileAfter.x, warpTileAfter.y);
+	bool onWarpTile = warpTileAfterId == TileMap::WARP_TILE_FLOOR || warpTileAfterId == TileMap::WARP_TILE_NO_FLOOR;
+	if(!downPressed || !onWarpTile)
+		bWarpUsed = false;
+
 	bool onTubeTop = map->isTubeTile(posPlayer, true);
 	bool onTubeBottom = map->isTubeTile(posPlayer, false);
     bool onTubeBottomAbove = map->isTubeTile(glm::ivec2(posPlayer.x, posPlayer.y - TUBE_UP_REACH_OFFSET_PX), false);

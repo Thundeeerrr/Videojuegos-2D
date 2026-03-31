@@ -5,6 +5,7 @@
 #include <glm/glm.hpp>
 #include <set>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 #include "Texture.h"
 #include "ShaderProgram.h"
@@ -33,6 +34,9 @@ private:
 	TileMap(const string &levelFile, const glm::vec2 &minCoords, ShaderProgram &program);
 
 public:
+   static const int WARP_TILE_FLOOR = 989;
+	static const int WARP_TILE_NO_FLOOR = 988;
+
 	// Tile maps can only be created inside an OpenGL context
 	static TileMap *createTileMap(const string &levelFile, const glm::vec2 &minCoords, ShaderProgram &program);
 
@@ -58,6 +62,8 @@ public:
 	const vector<glm::ivec2> &getDoorPositions() const { return doorPositions; }
 	const std::unordered_set<glm::ivec2, IVec2Hash>& getKeyPositions() const { return keyPositions; }
 	void removeKeyAtTile(const glm::ivec2& tilePos);
+	int getTile(int x, int y) const;
+	std::vector<std::pair<glm::ivec2, glm::ivec2>> getWarpPlatformPairs() const;
 
 private:
 	bool loadLevel(const string &levelFile);

@@ -58,6 +58,7 @@ private:
 	glm::ivec2 tubeExitPos;
   bool tubeExitFromTop;
 	bool tubeInputLocked;
+   bool bWarpUsed = false;
  static const int TUBE_ENTER_TIME = 1000;
 	static const int TUBE_EXIT_TIME = 400;
 

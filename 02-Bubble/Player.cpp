@@ -19,7 +19,10 @@ enum PlayerAnims
 namespace
 {
     const int DOOR_ANIM_DURATION_MS = 750;
-    const int DOOR_ENTER_ROW = 2;
+    const int DOOR_ANIM_FRAMES = 2;
+	const int DOOR_ANIM_FPS = 20;
+	const int DOOR_TELEPORT_ANIM_DURATION_MS = (1000 * DOOR_ANIM_FRAMES) / DOOR_ANIM_FPS;
+	const int DOOR_ENTER_ROW = 2;
 	const int DOOR_ENTER_COL_A = 0;
 	const int DOOR_ENTER_COL_B = 1;
    const int DOOR_EXIT_ROW = 2;
@@ -32,6 +35,7 @@ namespace
 	const float PLAYER_COLLISION_HEIGHT_PX = 16.f;
 	const float PLAYER_SPRITE_HEIGHT_PX = 24.f;
 	const float PLAYER_VISUAL_OFFSET_Y_PX = PLAYER_COLLISION_HEIGHT_PX - PLAYER_SPRITE_HEIGHT_PX;
+  const int DOOR_TELEPORT_EXIT_OFFSET_PX = int(PLAYER_COLLISION_HEIGHT_PX / 2.f);
    const int TUBE_UP_REACH_OFFSET_PX = 16;
     const int WARP_ANIM_FRAMES = 4;
     const int WARP_ANIM_FPS = 6;
@@ -64,6 +68,13 @@ void Player::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 	facingRight = true;
   doorState = DoorState::NONE;
 	doorTimer = 0;
+  doorTeleportState = DoorTeleportState::NONE;
+	doorTeleportTimer = 0;
+ doorTeleportDuration = 0;
+	doorTeleportStartPos = glm::ivec2(0);
+	doorTeleportTargetPos = glm::ivec2(0);
+	doorTeleportExitStartPos = glm::ivec2(0);
+	doorTeleportDestinationPos = glm::ivec2(0);
     tubeState = TubeState::NONE;
 	tubeTimer = 0;
 	tubeExitPos = glm::ivec2(0);
@@ -190,6 +201,56 @@ void Player::update(int deltaTime)
 		if(warpTimer <= 0)
         {
 			warpState = WarpState::NONE;
+			sprite->changeAnimation(facingRight ? STAND_RIGHT : STAND_LEFT);
+		}
+		sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y) + PLAYER_VISUAL_OFFSET_Y_PX));
+		return;
+	}
+   auto lerpPos = [](const glm::ivec2 &from, const glm::ivec2 &to, float t) -> glm::ivec2
+	{
+		float fx = float(from.x) + (float(to.x - from.x) * t);
+		float fy = float(from.y) + (float(to.y - from.y) * t);
+		return glm::ivec2(int(std::round(fx)), int(std::round(fy)));
+	};
+ if(doorTeleportState == DoorTeleportState::ENTERING)
+	{
+		sprite->setAnimationPaused(false);
+		if(sprite->animation() != DOOR_ENTER)
+			sprite->changeAnimation(DOOR_ENTER);
+		sprite->update(deltaTime);
+		doorTeleportTimer -= deltaTime;
+      float t = 1.f - (float(doorTeleportTimer) / float(doorTeleportDuration));
+		if(t < 0.f) t = 0.f;
+		if(t > 1.f) t = 1.f;
+		posPlayer = lerpPos(doorTeleportStartPos, doorTeleportTargetPos, t);
+		if(doorTeleportTimer <= 0)
+		{
+         posPlayer = doorTeleportExitStartPos;
+			doorTeleportState = DoorTeleportState::EXITING;
+           doorTeleportTimer = DOOR_TELEPORT_ANIM_DURATION_MS;
+			doorTeleportDuration = DOOR_TELEPORT_ANIM_DURATION_MS;
+			doorTeleportStartPos = doorTeleportExitStartPos;
+			doorTeleportTargetPos = doorTeleportDestinationPos;
+			sprite->changeAnimation(DOOR_EXIT);
+		}
+		sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y) + PLAYER_VISUAL_OFFSET_Y_PX));
+		return;
+	}
+	if(doorTeleportState == DoorTeleportState::EXITING)
+	{
+		sprite->setAnimationPaused(false);
+		if(sprite->animation() != DOOR_EXIT)
+			sprite->changeAnimation(DOOR_EXIT);
+		sprite->update(deltaTime);
+		doorTeleportTimer -= deltaTime;
+      float t = 1.f - (float(doorTeleportTimer) / float(doorTeleportDuration));
+		if(t < 0.f) t = 0.f;
+		if(t > 1.f) t = 1.f;
+		posPlayer = lerpPos(doorTeleportStartPos, doorTeleportTargetPos, t);
+		if(doorTeleportTimer <= 0)
+		{
+			doorTeleportState = DoorTeleportState::NONE;
+            posPlayer = doorTeleportDestinationPos;
 			sprite->changeAnimation(facingRight ? STAND_RIGHT : STAND_LEFT);
 		}
 		sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y) + PLAYER_VISUAL_OFFSET_Y_PX));
@@ -458,13 +519,24 @@ void Player::update(int deltaTime)
 		glm::ivec2 destinationTile = map->getDoorDestination(playerTile);
 		if(destinationTile.x != -1)
 		{
-			posPlayer.x = destinationTile.x * tileSize;
-			posPlayer.y = destinationTile.y * tileSize - playerH + tileSize;
+         doorTeleportDestinationPos = glm::ivec2(
+				destinationTile.x * tileSize,
+				destinationTile.y * tileSize - playerH + tileSize);
+            doorTeleportStartPos = posPlayer;
+			doorTeleportTargetPos = glm::ivec2(
+				playerTile.x * tileSize,
+				playerTile.y * tileSize);
+			doorTeleportExitStartPos = glm::ivec2(
+				destinationTile.x * tileSize,
+				destinationTile.y * tileSize - playerH + tileSize + DOOR_TELEPORT_EXIT_OFFSET_PX);
+			doorTeleportState = DoorTeleportState::ENTERING;
+           doorTeleportTimer = DOOR_TELEPORT_ANIM_DURATION_MS;
+			doorTeleportDuration = DOOR_TELEPORT_ANIM_DURATION_MS;
+			sprite->changeAnimation(DOOR_ENTER);
+			bWarpUsed = true;
+			sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y) + PLAYER_VISUAL_OFFSET_Y_PX));
+			return;
 		}
-		bWarpUsed = true;
-		playerTile = glm::ivec2(
-			int((posPlayer.x + playerW / 2.f) / tileSize),
-			int((posPlayer.y + playerH - 1.f) / tileSize));
 	}
 
   glm::ivec2 warpTileAfter = getFeetTile(posPlayer);

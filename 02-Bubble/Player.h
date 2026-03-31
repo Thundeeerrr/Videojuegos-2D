@@ -17,6 +17,7 @@ public:
 	~Player();
 
    enum class DoorState { NONE, ENTERING, ENTERED, LEAVING };
+  enum class DoorTeleportState { NONE, ENTERING, EXITING };
 	enum class TubeState { NONE, ENTERING, TRAVELING, EXITING, DONE };
 	enum class WarpState { NONE, DISAPPEARING, APPEARING };
 
@@ -54,6 +55,13 @@ private:
   int keyCount;
   DoorState doorState;
 	int doorTimer;
+    DoorTeleportState doorTeleportState;
+	int doorTeleportTimer;
+  int doorTeleportDuration;
+	glm::ivec2 doorTeleportStartPos;
+	glm::ivec2 doorTeleportTargetPos;
+	glm::ivec2 doorTeleportExitStartPos;
+	glm::ivec2 doorTeleportDestinationPos;
 	TubeState tubeState;
 	int tubeTimer;
 	glm::ivec2 tubeExitPos;

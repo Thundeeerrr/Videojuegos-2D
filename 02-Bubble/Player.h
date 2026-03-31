@@ -59,12 +59,20 @@ private:
 	glm::ivec2 tubeExitPos;
   bool tubeExitFromTop;
 	bool tubeInputLocked;
+  bool bJumpPlatformActive = false;
+	float jumpVelocity = 0.f;
+  float jumpPlatformPosY = 0.f;
+  bool jumpPlatformInputReleased = true;
   WarpState warpState;
 	int warpTimer;
 	glm::ivec2 warpDestinationPos;
    bool bWarpUsed = false;
  static const int TUBE_ENTER_TIME = 1000;
 	static const int TUBE_EXIT_TIME = 400;
+    static constexpr float JUMP_PLATFORM_GRAVITY = 0.1f;
+	static constexpr float JUMP_PLATFORM_TARGET_HEIGHT_PX = 112.f;
+	static const float JUMP_PLATFORM_VEL;
+	static constexpr float JUMP_PLATFORM_DAMP = 0.4f;
 
 };
 

@@ -13,7 +13,7 @@
 
 enum PlayerAnims
 {
-  STAND_LEFT, STAND_RIGHT, MOVE_LEFT, MOVE_RIGHT, DOOR_ENTER, DOOR_EXIT, PLANT_CLIMB_UP, PLANT_CLIMB_DOWN, WARP_DISAPPEAR, WARP_APPEAR
+  STAND_LEFT, STAND_RIGHT, MOVE_LEFT, MOVE_RIGHT, DOOR_ENTER, DOOR_EXIT, PLANT_CLIMB_UP, PLANT_CLIMB_DOWN, WARP_DISAPPEAR, WARP_APPEAR, JUMP_RIGHT, JUMP_LEFT
 };
 
 namespace
@@ -46,6 +46,8 @@ Player::Player()
 	map = NULL;
 }
 
+const float Player::JUMP_PLATFORM_VEL = std::sqrt(2.f * Player::JUMP_PLATFORM_GRAVITY * Player::JUMP_PLATFORM_TARGET_HEIGHT_PX);
+
 Player::~Player()
 {
 	if (sprite != NULL)
@@ -70,6 +72,7 @@ void Player::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
     warpState = WarpState::NONE;
 	warpTimer = 0;
 	warpDestinationPos = glm::ivec2(0);
+    jumpPlatformPosY = 0.f;
 	//spritesheet.loadFromFile("images/bub.png", TEXTURE_PIXEL_FORMAT_RGBA);
 	spritesheet.loadFromFile("images/BugsBunny-Sprites.png", TEXTURE_PIXEL_FORMAT_RGBA);
 	healthTexture.loadFromFile("images/heart.png", TEXTURE_PIXEL_FORMAT_RGBA);
@@ -80,7 +83,7 @@ void Player::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 	healthSprite = Sprite::createSprite(glm::ivec2(16, 16), glm::vec2(1.0, 1.0), &healthTexture, &shaderProgram);
 	#define UV(col, row) glm::vec2((col) / 8.f, (row) / 12.f)
 
-     sprite->setNumberAnimations(10);
+    sprite->setNumberAnimations(12);
 	
 		/*sprite->setAnimationSpeed(STAND_LEFT, 8);
 		sprite->addKeyframe(STAND_LEFT, glm::vec2(0.f, 0.f));
@@ -144,6 +147,14 @@ void Player::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 	sprite->addKeyframe(WARP_APPEAR, UV(2, WARP_ANIM_ROW));
 	sprite->addKeyframe(WARP_APPEAR, UV(1, WARP_ANIM_ROW));
 	sprite->addKeyframe(WARP_APPEAR, UV(0, WARP_ANIM_ROW));
+
+	sprite->setAnimationSpeed(JUMP_RIGHT, 8);
+	sprite->addKeyframe(JUMP_RIGHT, UV(0, 4));
+	sprite->addKeyframe(JUMP_RIGHT, UV(1, 4));
+
+	sprite->setAnimationSpeed(JUMP_LEFT, 8);
+	sprite->addKeyframe(JUMP_LEFT, UV(2, 4));
+	sprite->addKeyframe(JUMP_LEFT, UV(3, 4));
 		
 	sprite->changeAnimation(0);
 	tileMapDispl = tileMapPos;
@@ -184,7 +195,14 @@ void Player::update(int deltaTime)
 		sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y) + PLAYER_VISUAL_OFFSET_Y_PX));
 		return;
 	}
-   if(tubeState == TubeState::ENTERING)
+    if(bJumpPlatformActive)
+	{
+		sprite->setAnimationPaused(false);
+		int jumpAnim = facingRight ? JUMP_RIGHT : JUMP_LEFT;
+		if(sprite->animation() != jumpAnim)
+			sprite->changeAnimation(jumpAnim);
+	}
+	if(tubeState == TubeState::ENTERING)
 	{
 		if(sprite->animation() != (facingRight ? STAND_RIGHT : STAND_LEFT))
 			sprite->changeAnimation(facingRight ? STAND_RIGHT : STAND_LEFT);
@@ -271,41 +289,75 @@ void Player::update(int deltaTime)
 	sprite->setAnimationPaused(isTouchingStair && !upPressed && !downPressed && isClimbAnim);
 
 	sprite->update(deltaTime);
-	if(Game::instance().getKey(GLFW_KEY_LEFT))
+  bool leftPressed = Game::instance().getKey(GLFW_KEY_LEFT);
+	bool rightPressed = Game::instance().getKey(GLFW_KEY_RIGHT);
+ int moveStep = bJumpPlatformActive ? 1 : 2;
+ if(leftPressed)
 	{
         facingRight = false;
-		if(sprite->animation() != MOVE_LEFT)
+        if(!bJumpPlatformActive && sprite->animation() != MOVE_LEFT)
 			sprite->changeAnimation(MOVE_LEFT);
-		posPlayer.x -= 2;
+       posPlayer.x -= moveStep;
 		if(map->collisionMoveLeft(posPlayer, glm::ivec2(16, 16)))
 		{
-			posPlayer.x += 2;
-			sprite->changeAnimation(STAND_LEFT);
+           posPlayer.x += moveStep;
+            if(!bJumpPlatformActive)
+				sprite->changeAnimation(STAND_LEFT);
 		}
 	}
-	else if(Game::instance().getKey(GLFW_KEY_RIGHT))
+    else if(rightPressed)
 	{
        facingRight = true;
-		if(sprite->animation() != MOVE_RIGHT)
+       if(!bJumpPlatformActive && sprite->animation() != MOVE_RIGHT)
 			sprite->changeAnimation(MOVE_RIGHT);
-		posPlayer.x += 2;
+       posPlayer.x += moveStep;
 		if(map->collisionMoveRight(posPlayer, glm::ivec2(16, 16)))
 		{
-			posPlayer.x -= 2;
-			sprite->changeAnimation(STAND_RIGHT);
+           posPlayer.x -= moveStep;
+           if(!bJumpPlatformActive)
+				sprite->changeAnimation(STAND_RIGHT);
 		}
 	}
 	else
 	{
-		if(sprite->animation() == MOVE_LEFT)
+        if(!bJumpPlatformActive && sprite->animation() == MOVE_LEFT)
 			sprite->changeAnimation(STAND_LEFT);
-		else if(sprite->animation() == MOVE_RIGHT)
+      else if(!bJumpPlatformActive && sprite->animation() == MOVE_RIGHT)
 			sprite->changeAnimation(STAND_RIGHT);
-       else if(sprite->animation() == DOOR_ENTER || sprite->animation() == DOOR_EXIT)
+       else if(!bJumpPlatformActive && (sprite->animation() == DOOR_ENTER || sprite->animation() == DOOR_EXIT))
 			sprite->changeAnimation(STAND_RIGHT);
 	}
 	
-	if (isTouchingStair)
+    bool onGround = false;
+    bool horizontalPressed = leftPressed || rightPressed;
+	if (bJumpPlatformActive)
+	{
+       jumpPlatformPosY += jumpVelocity;
+		posPlayer.y = int(std::round(jumpPlatformPosY));
+		jumpVelocity += JUMP_PLATFORM_GRAVITY;
+       if(horizontalPressed)
+		{
+			if(jumpPlatformInputReleased)
+				jumpVelocity += JUMP_PLATFORM_DAMP;
+		}
+		else
+			jumpPlatformInputReleased = true;
+
+		int adjustedY = posPlayer.y;
+		if(map->collisionMoveUp(posPlayer, glm::ivec2(16, 16), &adjustedY))
+		{
+			posPlayer.y = adjustedY;
+         jumpPlatformPosY = float(posPlayer.y);
+			jumpVelocity = 0.f;
+			bJumpPlatformActive = false;
+		}
+     if(jumpVelocity >= 0.f)
+		{
+			jumpPlatformPosY = float(posPlayer.y);
+			bJumpPlatformActive = false;
+       }
+	}
+	else if (isTouchingStair)
 	{
 		if (Game::instance().getKey(GLFW_KEY_SPACE))	cout << "Player is touching a stair tile and space is pressed." << endl;
         if (upPressed)	
@@ -322,24 +374,39 @@ void Player::update(int deltaTime)
 			posPlayer.y += 2;
 			map->collisionMoveDown(posPlayer, glm::ivec2(16, 16), &posPlayer.y);
 		}
+       onGround = true;
 	}
 	else 
 	{
 		posPlayer.y += FALL_STEP;
-		map->collisionMoveDown(posPlayer, glm::ivec2(16, 16), &posPlayer.y);
+        onGround = map->collisionMoveDown(posPlayer, glm::ivec2(16, 16), &posPlayer.y);
 	}
+	if(!bJumpPlatformActive)
+		jumpPlatformPosY = float(posPlayer.y);
 
 	const int playerW = 16;
 	const int playerH = 16;
 	const int tileSize = map->getTileSize();
-   auto getFeetTile = [&](const glm::ivec2 &playerPos) -> glm::ivec2
+	auto getFeetTile = [&](const glm::ivec2 &playerPos) -> glm::ivec2
 	{
 		int probeX = playerPos.x + playerW / 2;
 		int probeY = playerPos.y + playerH;
 		return glm::ivec2(probeX / tileSize, probeY / tileSize);
 	};
 
-   glm::ivec2 warpTile = getFeetTile(posPlayer);
+	if(onGround && !bJumpPlatformActive)
+	{
+		glm::ivec2 feetTile = getFeetTile(posPlayer);
+     if(map->getTile(feetTile.x, feetTile.y) == TileMap::JUMP_PLATFORM_TILE)
+		{
+          jumpPlatformPosY = float(posPlayer.y);
+			jumpVelocity = -JUMP_PLATFORM_VEL;
+			bJumpPlatformActive = true;
+           jumpPlatformInputReleased = !horizontalPressed;
+		}
+	}
+
+ glm::ivec2 warpTile = getFeetTile(posPlayer);
 	int warpTileId = map->getTile(warpTile.x, warpTile.y);
 	bool isWarpTile = warpTileId == TileMap::WARP_TILE_FLOOR || warpTileId == TileMap::WARP_TILE_NO_FLOOR;
  if(downPressed && !bWarpUsed && isWarpTile && doorState == DoorState::NONE && tubeState == TubeState::NONE)
@@ -421,7 +488,9 @@ void Player::render()
 		return;
 	}
 
-  if(!facingRight)
+  int currentAnim = sprite->animation();
+	bool usesExplicitFacing = currentAnim == JUMP_LEFT || currentAnim == JUMP_RIGHT;
+	if(!facingRight && !usesExplicitFacing)
 	{
 		glm::mat4 local = glm::translate(glm::mat4(1.0f), glm::vec3(PLAYER_FRAME_WIDTH_PX, 0.f, 0.f));
 		local = glm::scale(local, glm::vec3(-1.f, 1.f, 1.f));
@@ -448,6 +517,7 @@ void Player::setTileMap(TileMap *tileMap)
 void Player::setPosition(const glm::vec2 &pos)
 {
 	posPlayer = pos;
+    jumpPlatformPosY = float(posPlayer.y);
    sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y) + PLAYER_VISUAL_OFFSET_Y_PX));
 }
 

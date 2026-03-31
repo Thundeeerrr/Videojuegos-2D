@@ -29,6 +29,8 @@ namespace
 	const int TILE_BOMB = 989;
    const int WARP_TILE_FLOOR_RENDER_ID = 193;
 	const int WARP_TILE_NO_FLOOR_RENDER_ID = 37;
+   const int LEVEL01_JUMP_PLATFORM_RENDER_TILE_ID = 142;
+	const int LEVEL04_JUMP_PLATFORM_RENDER_TILE_ID = 114;
 }
 
 
@@ -95,15 +97,21 @@ bool TileMap::loadLevel(const string &levelFile)
 	sstream >> tilesheetFile;
    tubeTopRenderTileId = DEFAULT_TUBE_TOP_RENDER_TILE_ID;
 	tubeBottomRenderTileId = DEFAULT_TUBE_BOTTOM_RENDER_TILE_ID;
+    jumpPlatformRenderTileId = -1;
 	if(tilesheetFile.find("level4-def") != string::npos)
 	{
 		tubeTopRenderTileId = LEVEL04_TUBE_TOP_RENDER_TILE_ID;
 		tubeBottomRenderTileId = LEVEL04_TUBE_BOTTOM_RENDER_TILE_ID;
+       jumpPlatformRenderTileId = LEVEL04_JUMP_PLATFORM_RENDER_TILE_ID;
 	}
-   else if(tilesheetFile.find("level5-def") != string::npos)
+    else if(tilesheetFile.find("level5-def") != string::npos)
 	{
 		tubeTopRenderTileId = LEVEL05_TUBE_TOP_RENDER_TILE_ID;
 		tubeBottomRenderTileId = LEVEL05_TUBE_BOTTOM_RENDER_TILE_ID;
+	}
+   else if(tilesheetFile.find("level1") != string::npos)
+	{
+		jumpPlatformRenderTileId = LEVEL01_JUMP_PLATFORM_RENDER_TILE_ID;
 	}
 	tilesheet.loadFromFile(tilesheetFile, TEXTURE_PIXEL_FORMAT_RGBA);
 	tilesheet.setWrapS(GL_CLAMP_TO_EDGE);
@@ -143,6 +151,7 @@ bool TileMap::loadLevel(const string &levelFile)
 	}
 	collidedTiles.insert(WARP_TILE_FLOOR);
 	collidedTiles.insert(WARP_TILE_NO_FLOOR);
+	collidedTiles.insert(JUMP_PLATFORM_TILE);
 
 	getline(fin, line);
 	sstream.clear();
@@ -265,12 +274,18 @@ void TileMap::prepareArrays(const glm::vec2 &minCoords, ShaderProgram &program)
 	{
 		for(int i=0; i<mapSize.x; i++)
 		{
-          tile = map[j * mapSize.x + i];
+            tile = map[j * mapSize.x + i];
 			int tileToRender = tile;
 			if(tile == WARP_TILE_FLOOR)
 				tileToRender = WARP_TILE_FLOOR_RENDER_ID;
 			else if(tile == WARP_TILE_NO_FLOOR)
 				tileToRender = WARP_TILE_NO_FLOOR_RENDER_ID;
+			else if(tile == JUMP_PLATFORM_TILE)
+			{
+				if(jumpPlatformRenderTileId < 0)
+					continue;
+				tileToRender = jumpPlatformRenderTileId;
+			}
 			if(tile == -2)
 			{
 				glm::ivec2 tilePos(i, j);
@@ -355,6 +370,31 @@ bool TileMap::collisionMoveLeft(const glm::ivec2 &pos, const glm::ivec2 &size) c
 	return false;*/
 	if (pos.x <= 0)
 		return true;
+	return false;
+}
+
+bool TileMap::collisionMoveUp(const glm::ivec2 &pos, const glm::ivec2 &size, int *posY) const
+{
+	int x0, x1, y;
+
+	x0 = pos.x / tileSize;
+	x1 = (pos.x + size.x - 1) / tileSize;
+	y = pos.y / tileSize;
+	if(y < 0 || y >= mapSize.y)
+		return false;
+
+	for(int x = x0; x <= x1; x++)
+	{
+		if(x < 0 || x >= mapSize.x)
+			continue;
+		int tile = map[y * mapSize.x + x];
+		if(collidedTiles.find(tile) != collidedTiles.end() || tile == -2)
+		{
+			*posY = (y + 1) * tileSize;
+			return true;
+		}
+	}
+
 	return false;
 }
 

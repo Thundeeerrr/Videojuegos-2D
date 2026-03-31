@@ -36,6 +36,7 @@ private:
 public:
    static const int WARP_TILE_FLOOR = 989;
 	static const int WARP_TILE_NO_FLOOR = 988;
+	static const int JUMP_PLATFORM_TILE = 987;
 
 	// Tile maps can only be created inside an OpenGL context
 	static TileMap *createTileMap(const string &levelFile, const glm::vec2 &minCoords, ShaderProgram &program);
@@ -50,6 +51,7 @@ public:
 	bool collisionMoveLeft(const glm::ivec2 &pos, const glm::ivec2 &size) const;
 	bool collisionMoveRight(const glm::ivec2 &pos, const glm::ivec2 &size) const;
 	bool collisionMoveDown(const glm::ivec2 &pos, const glm::ivec2 &size, int *posY) const;
+  bool collisionMoveUp(const glm::ivec2 &pos, const glm::ivec2 &size, int *posY) const;
 	bool isStairTile(const glm::ivec2& pos) const;
    bool isDoorTile(const glm::ivec2 &pos) const;
    bool isTubeTile(const glm::ivec2 &pos, bool topVariant) const;
@@ -80,6 +82,7 @@ private:
 	glm::vec2 tileTexSize;
    int tubeTopRenderTileId;
 	int tubeBottomRenderTileId;
+   int jumpPlatformRenderTileId;
 	int *map;
 	set<int> collidedTiles;
 	vector<glm::ivec2> doorPositions;

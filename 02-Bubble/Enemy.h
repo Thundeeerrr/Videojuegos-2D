@@ -23,6 +23,7 @@ public:
 	void setTileMap(TileMap *tileMap);
 	void setPosition(const glm::vec2 &pos);
 	glm::vec2 getPosition() const;
+	glm::ivec2 getCollisionSize() const { return glm::ivec2(COLLISION_W_PX, COLLISION_H_PX); }
 
 	State getState() const { return state; }
 	virtual Type getType() const = 0;

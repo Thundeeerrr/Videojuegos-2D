@@ -43,6 +43,8 @@ public:
 	void resetTubeState();
   void startDoorExitAnimation();
 	void resetDoorState();
+	void startDeathAnimation();
+	bool isDeathAnimationFinished() const;
 	
 private:
 	bool bJumping;
@@ -77,6 +79,9 @@ private:
 	int warpTimer;
 	glm::ivec2 warpDestinationPos;
    bool bWarpUsed = false;
+   bool deathActive;
+	bool deathFinished;
+	int deathTimerMs;
  static const int TUBE_ENTER_TIME = 1000;
 	static const int TUBE_EXIT_TIME = 400;
     static constexpr float JUMP_PLATFORM_GRAVITY = 0.1f;

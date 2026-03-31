@@ -24,6 +24,9 @@ namespace
 	const int PLAYER_FOOT_OFFSET_Y_MINUS_ONE_PX = PLAYER_COLLISION_HEIGHT_PX - 1;
   const int PLAYER_HEAD_OFFSET_Y_PX = 0;
 	const int PLAYER_HEAD_OFFSET_Y_MINUS_ONE_PX = -1;
+	const int EXPLOSION_TILE_SIZE_PX = 16;
+	const int EXPLOSION_FRAME_COUNT = 5;
+	const int EXPLOSION_DURATION_MS = 400;
 
 	bool containsDoorTile(const std::vector<glm::ivec2> &tiles, const glm::ivec2 &tile)
 	{
@@ -54,6 +57,12 @@ Scene::Scene()
   returnTilePos = glm::ivec2(0);
 	godMode = false;
  weightPushLatch.clear();
+   explosionVao = 0;
+	explosionVbo = 0;
+	explosionPosLocation = -1;
+	explosionTexCoordLocation = -1;
+	playerDeathActive = false;
+   enemyExplosions.clear();
 }
 
 Scene::~Scene()
@@ -66,6 +75,10 @@ Scene::~Scene()
    freeDoors();
    freeKeys();
    freeEnemies();
+   if(explosionVao != 0)
+		glDeleteVertexArrays(1, &explosionVao);
+	if(explosionVbo != 0)
+		glDeleteBuffers(1, &explosionVbo);
 }
 
 
@@ -116,6 +129,35 @@ void Scene::init(const std::string &sceneName)
 		weights.push_back(weight);
 	}
   weightPushLatch.assign(weights.size(), false);
+  playerDeathActive = false;
+	enemyExplosions.clear();
+
+   explosionTexture.loadFromFile("images/Explosions.png", TEXTURE_PIXEL_FORMAT_RGBA);
+	explosionTexture.setWrapS(GL_CLAMP_TO_EDGE);
+	explosionTexture.setWrapT(GL_CLAMP_TO_EDGE);
+	explosionTexture.setMinFilter(GL_NEAREST);
+	explosionTexture.setMagFilter(GL_NEAREST);
+
+	if(explosionVao != 0)
+		glDeleteVertexArrays(1, &explosionVao);
+	if(explosionVbo != 0)
+		glDeleteBuffers(1, &explosionVbo);
+
+	const float frameWidthUv = 1.f / float(EXPLOSION_FRAME_COUNT);
+	float vertices[16] = {
+		0.f, 0.f, 0.f, 0.f,
+		float(EXPLOSION_TILE_SIZE_PX), 0.f, frameWidthUv, 0.f,
+		float(EXPLOSION_TILE_SIZE_PX), float(EXPLOSION_TILE_SIZE_PX), frameWidthUv, 1.f,
+		0.f, float(EXPLOSION_TILE_SIZE_PX), 0.f, 1.f
+	};
+
+	glGenVertexArrays(1, &explosionVao);
+	glBindVertexArray(explosionVao);
+	glGenBuffers(1, &explosionVbo);
+	glBindBuffer(GL_ARRAY_BUFFER, explosionVbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+	explosionPosLocation = texProgram.bindVertexAttribute("position", 2, 4 * sizeof(float), 0);
+	explosionTexCoordLocation = texProgram.bindVertexAttribute("texCoord", 2, 4 * sizeof(float), (void *)(2 * sizeof(float)));
 	player = new Player();
 	player->init(glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
 	for (int i = 0; i < 1; ++i)
@@ -206,6 +248,23 @@ void Scene::update(int deltaTime)
 
 	for(int i=0; i<int(doors.size()); ++i)
 		doors[i]->update(deltaTime);
+	for(int i = 0; i < int(enemyExplosions.size()); )
+	{
+		enemyExplosions[i].timerMs -= deltaTime;
+		if(enemyExplosions[i].timerMs <= 0)
+			enemyExplosions.erase(enemyExplosions.begin() + i);
+		else
+			++i;
+	}
+
+	if(playerDeathActive)
+	{
+        player->update(deltaTime);
+		if(player->isDeathAnimationFinished())
+			loadLevel(currentLevelNum);
+		return;
+	}
+
   player->update(deltaTime);
 	bool leftPressed = Game::instance().getKey(GLFW_KEY_LEFT);
 	bool rightPressed = Game::instance().getKey(GLFW_KEY_RIGHT);
@@ -241,6 +300,47 @@ void Scene::update(int deltaTime)
 	glm::vec2 playerPos = player->getPosition();
 	glm::ivec2 playerTilePos((int(playerPos.x) + 8) / map->getTileSize(),(int(playerPos.y) + 15) / map->getTileSize());
 	for (int i = 0; i < Enemies.size(); ++i)	Enemies[i]->update(deltaTime, playerPos);
+ for (int i = 0; i < int(Enemies.size()); )
+	{
+		bool killedByWeight = false;
+		glm::vec2 enemyPos = Enemies[i]->getPosition();
+		glm::ivec2 enemySize = Enemies[i]->getCollisionSize();
+		for(int j = 0; j < int(weights.size()) && !killedByWeight; ++j)
+		{
+			if(!weights[j]->isMoving())
+				continue;
+
+			if(collidesWith(enemyPos, enemySize, weights[j]->getPosition(), weights[j]->getSize()))
+				killedByWeight = true;
+		}
+
+		if(killedByWeight)
+		{
+          EnemyExplosion explosion;
+			explosion.pos = enemyPos;
+			explosion.timerMs = EXPLOSION_DURATION_MS;
+			enemyExplosions.push_back(explosion);
+			delete Enemies[i];
+			Enemies.erase(Enemies.begin() + i);
+		}
+		else
+			++i;
+	}
+
+	if(!godMode && !playerDeathActive)
+	{
+		glm::vec2 playerPosNow = player->getPosition();
+		glm::ivec2 playerSizeNow = player->getSize();
+		for(int i = 0; i < int(Enemies.size()); ++i)
+		{
+			if(collidesWith(playerPosNow, playerSizeNow, Enemies[i]->getPosition(), Enemies[i]->getCollisionSize()))
+			{
+				playerDeathActive = true;
+             player->startDeathAnimation();
+				break;
+			}
+		}
+	}
 	for (int i = 0; i < int(keys.size()); )
 	{
 		if (keys[i]->getTilePos() == playerTilePos)
@@ -379,9 +479,31 @@ void Scene::render()
 		keys[i]->render();
    for(int i=0; i<int(weights.size()); ++i)
 		weights[i]->render();
-	player->render();
+   player->render();
    for (int i = 0; i < int(Enemies.size()); ++i)
 		Enemies[i]->render();
+   if(explosionVao != 0)
+	{
+		const float frameWidthUv = 1.f / float(EXPLOSION_FRAME_COUNT);
+		for(int i = 0; i < int(enemyExplosions.size()); ++i)
+		{
+			const int elapsedMs = EXPLOSION_DURATION_MS - enemyExplosions[i].timerMs;
+			int frame = (elapsedMs * EXPLOSION_FRAME_COUNT) / EXPLOSION_DURATION_MS;
+			if(frame < 0) frame = 0;
+			if(frame >= EXPLOSION_FRAME_COUNT) frame = EXPLOSION_FRAME_COUNT - 1;
+
+			glm::mat4 explosionModelview = glm::translate(glm::mat4(1.0f), glm::vec3(enemyExplosions[i].pos.x, enemyExplosions[i].pos.y, 0.f));
+			texProgram.setUniformMatrix4f("modelview", explosionModelview);
+			texProgram.setUniform2f("texCoordDispl", frame * frameWidthUv, 0.f);
+			glEnable(GL_TEXTURE_2D);
+			explosionTexture.use();
+			glBindVertexArray(explosionVao);
+			glEnableVertexAttribArray(explosionPosLocation);
+			glEnableVertexAttribArray(explosionTexCoordLocation);
+			glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+			glDisable(GL_TEXTURE_2D);
+		}
+	}
 }
 
 void Scene::freeDoors()
@@ -459,6 +581,8 @@ void Scene::loadLevel(int levelNum)
 	for(int i=0; i<int(weights.size()); ++i)
 		delete weights[i];
 	weights.clear();
+	playerDeathActive = false;
+	enemyExplosions.clear();
 
 	if(levelNum == 0)
 	{
@@ -492,6 +616,8 @@ void Scene::loadLevelFile(const std::string &levelPath)
 		delete player;
 		player = NULL;
 	}
+	playerDeathActive = false;
+	enemyExplosions.clear();
 
 	init(levelPath);
 }

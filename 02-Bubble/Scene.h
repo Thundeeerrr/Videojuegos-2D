@@ -19,6 +19,11 @@
 
 class Scene
 {
+	struct EnemyExplosion
+	{
+		glm::vec2 pos;
+		int timerMs;
+	};
 
 public:
 	Scene();
@@ -63,6 +68,11 @@ private:
 	vector<Enemy*> Enemies;
 	bool godMode;
  std::vector<bool> weightPushLatch;
+	Texture explosionTexture;
+	GLuint explosionVao, explosionVbo;
+	GLint explosionPosLocation, explosionTexCoordLocation;
+	bool playerDeathActive;
+  std::vector<EnemyExplosion> enemyExplosions;
 };
 
 

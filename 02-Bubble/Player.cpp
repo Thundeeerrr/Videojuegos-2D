@@ -13,7 +13,7 @@
 
 enum PlayerAnims
 {
-  STAND_LEFT, STAND_RIGHT, MOVE_LEFT, MOVE_RIGHT, DOOR_ENTER, DOOR_EXIT, PLANT_CLIMB_UP, PLANT_CLIMB_DOWN, WARP_DISAPPEAR, WARP_APPEAR, JUMP_RIGHT, JUMP_LEFT
+  STAND_LEFT, STAND_RIGHT, MOVE_LEFT, MOVE_RIGHT, DOOR_ENTER, DOOR_EXIT, PLANT_CLIMB_UP, PLANT_CLIMB_DOWN, WARP_DISAPPEAR, WARP_APPEAR, JUMP_RIGHT, JUMP_LEFT, DEATH_RIGHT, DEATH_LEFT
 };
 
 namespace
@@ -41,6 +41,13 @@ namespace
     const int WARP_ANIM_FPS = 6;
 	const int WARP_ANIM_DURATION_MS = (1000 * WARP_ANIM_FRAMES) / WARP_ANIM_FPS;
 	const int WARP_ANIM_ROW = 3;
+   const int DEATH_ANIM_FIRST_COL = 0;
+  const int DEATH_ANIM_LAST_COL = 3;
+	const int DEATH_ANIM_FRAMES = DEATH_ANIM_LAST_COL - DEATH_ANIM_FIRST_COL + 1;
+	const int DEATH_ANIM_FPS = 10;
+	const int DEATH_ANIM_DURATION_MS = (1000 * DEATH_ANIM_FRAMES) / DEATH_ANIM_FPS;
+	const int DEATH_ANIM_RIGHT_ROW = 5;
+	const int DEATH_ANIM_LEFT_ROW = 6;
 }
 
 
@@ -84,6 +91,9 @@ void Player::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
     warpState = WarpState::NONE;
 	warpTimer = 0;
 	warpDestinationPos = glm::ivec2(0);
+     deathActive = false;
+	deathFinished = false;
+	deathTimerMs = 0;
     jumpPlatformPosY = 0.f;
 	//spritesheet.loadFromFile("images/bub.png", TEXTURE_PIXEL_FORMAT_RGBA);
 	spritesheet.loadFromFile("images/BugsBunny-Sprites.png", TEXTURE_PIXEL_FORMAT_RGBA);
@@ -95,7 +105,7 @@ void Player::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 	healthSprite = Sprite::createSprite(glm::ivec2(16, 16), glm::vec2(1.0, 1.0), &healthTexture, &shaderProgram);
 	#define UV(col, row) glm::vec2((col) / 8.f, (row) / 12.f)
 
-    sprite->setNumberAnimations(12);
+    sprite->setNumberAnimations(14);
 	
 		/*sprite->setAnimationSpeed(STAND_LEFT, 8);
 		sprite->addKeyframe(STAND_LEFT, glm::vec2(0.f, 0.f));
@@ -167,6 +177,14 @@ void Player::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 	sprite->setAnimationSpeed(JUMP_LEFT, 8);
 	sprite->addKeyframe(JUMP_LEFT, UV(2, 4));
 	sprite->addKeyframe(JUMP_LEFT, UV(3, 4));
+
+	sprite->setAnimationSpeed(DEATH_RIGHT, DEATH_ANIM_FPS);
+	for(int col = DEATH_ANIM_FIRST_COL; col <= DEATH_ANIM_LAST_COL; ++col)
+		sprite->addKeyframe(DEATH_RIGHT, UV(col, DEATH_ANIM_RIGHT_ROW));
+
+	sprite->setAnimationSpeed(DEATH_LEFT, DEATH_ANIM_FPS);
+	for(int col = DEATH_ANIM_FIRST_COL; col <= DEATH_ANIM_LAST_COL; ++col)
+		sprite->addKeyframe(DEATH_LEFT, UV(col, DEATH_ANIM_LEFT_ROW));
 		
 	sprite->changeAnimation(0);
 	//tileMapDispl = tileMapPos;
@@ -176,6 +194,23 @@ void Player::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 
 void Player::update(int deltaTime)
 {
+   if(deathActive)
+	{
+		sprite->setAnimationPaused(false);
+		int deathAnim = facingRight ? DEATH_RIGHT : DEATH_LEFT;
+		if(sprite->animation() != deathAnim)
+			sprite->changeAnimation(deathAnim);
+		sprite->update(deltaTime);
+		deathTimerMs -= deltaTime;
+		if(deathTimerMs <= 0)
+		{
+			deathActive = false;
+			deathFinished = true;
+		}
+		sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y) + PLAYER_VISUAL_OFFSET_Y_PX));
+		return;
+	}
+
  if(warpState == WarpState::DISAPPEARING)
 	{
 		sprite->setAnimationPaused(false);
@@ -601,7 +636,7 @@ void Player::render()
 	}
 
   int currentAnim = sprite->animation();
-	bool usesExplicitFacing = currentAnim == JUMP_LEFT || currentAnim == JUMP_RIGHT;
+    bool usesExplicitFacing = currentAnim == JUMP_LEFT || currentAnim == JUMP_RIGHT || currentAnim == DEATH_LEFT || currentAnim == DEATH_RIGHT;
 	if(!facingRight && !usesExplicitFacing)
 	{
 		glm::mat4 local = glm::translate(glm::mat4(1.0f), glm::vec3(PLAYER_FRAME_WIDTH_PX, 0.f, 0.f));
@@ -712,6 +747,22 @@ void Player::startDoorExitAnimation()
 	doorState = DoorState::LEAVING;
  doorTimer = DOOR_ANIM_DURATION_MS;
 	sprite->changeAnimation(DOOR_EXIT);
+}
+
+void Player::startDeathAnimation()
+{
+	if(deathActive)
+		return;
+
+	deathActive = true;
+	deathFinished = false;
+	deathTimerMs = DEATH_ANIM_DURATION_MS;
+	sprite->changeAnimation(facingRight ? DEATH_RIGHT : DEATH_LEFT);
+}
+
+bool Player::isDeathAnimationFinished() const
+{
+	return deathFinished;
 }
 
 

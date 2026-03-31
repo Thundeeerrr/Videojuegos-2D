@@ -5,6 +5,7 @@
 #include "Game.h"
 #include <glm/gtc/matrix_transform.hpp>
 
+bool Enemy::freezed = false;
 namespace
 {
 	int signInt(int v)
@@ -224,9 +225,8 @@ void Enemy::update(int deltaTime, const glm::vec2 &bugsWorldPos)
 {
 	if(sprite == NULL || map == NULL)
 		return;
-
 	sprite->update(deltaTime);
-
+	if (freezed)	return;
 	const bool onClimbable = map->isStairTileForBody(
 		posEnemy,
 		glm::ivec2(COLLISION_W_PX, COLLISION_H_PX));
@@ -270,4 +270,14 @@ void Enemy::update(int deltaTime, const glm::vec2 &bugsWorldPos)
 	sprite->setPosition(glm::vec2(
 		float(tileMapDispl.x + posEnemy.x),
 		float(tileMapDispl.y + posEnemy.y + visualOffsetY)));
+}
+
+void Enemy::Freeze()
+{
+	freezed = true;
+}
+
+void Enemy::Unfreeze()
+{
+	freezed = false;
 }

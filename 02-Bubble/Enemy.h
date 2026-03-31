@@ -20,6 +20,9 @@ public:
 	void update(int deltaTime, const glm::vec2 &bugsWorldPos);
 	void render();
 
+	static void Freeze();
+	static void Unfreeze();
+
 	void setTileMap(TileMap *tileMap);
 	void setPosition(const glm::vec2 &pos);
 	glm::vec2 getPosition() const;
@@ -70,6 +73,8 @@ protected:
 
 	int frameWidthPx;
 	int frameHeightPx;
+
+	static bool freezed;
 
 private:
 	void choosePatrolDirection();

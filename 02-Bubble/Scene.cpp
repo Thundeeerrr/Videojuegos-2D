@@ -72,6 +72,10 @@ Scene::Scene()
    enemyExplosions.clear();
    remainingLives = MAX_LIVES;
    spaceWasPressed = false;
+	hasSuspendedLevel = false;
+	suspendedLevelNum = -1;
+	suspendedMap = NULL;
+	suspendedPlayer = NULL;
 }
 
 Scene::~Scene()
@@ -288,6 +292,8 @@ void Scene::update(int deltaTime)
 {
 	currentTime += deltaTime;
 	bool dPressed = Game::instance().getKey(GLFW_KEY_D);
+	if (player->isDoorInteractionStarted())	Enemy::Freeze();
+	else	Enemy::Unfreeze();
 	if(dPressed && !dWasPressed)
 	{
 		for(int i=0; i<int(doors.size()); ++i)
@@ -391,7 +397,10 @@ void Scene::update(int deltaTime)
 	spaceWasPressed = spacePressed;
 
 	glm::ivec2 playerTilePos((int(playerPos.x) + 8) / map->getTileSize(),(int(playerPos.y) + 15) / map->getTileSize());
-	for (int i = 0; i < Enemies.size(); ++i)	Enemies[i]->update(deltaTime, playerPos);
+	for (int i = 0; i < Enemies.size(); ++i)	
+	{
+		Enemies[i]->update(deltaTime, playerPos);
+	}
 	for (int i = 0; i < int(Enemies.size()); )
 	{
 		bool killedByWeight = false;
@@ -553,19 +562,21 @@ void Scene::update(int deltaTime)
 	if(player->hasDoorTransitionEnded())
 	{
 		player->resetDoorState();
-       if(currentLevelNum == 0)
+
+		if(currentLevelNum == 0)
 		{
-            if(hasReturnPoint)
+			// Returning from key room: restore suspended level, do NOT reload.
+			if(hasReturnPoint)
 			{
-				hasSpawnOverride = true;
-				spawnTileOverride = returnTilePos;
-				loadLevel(returnLevelNum);
+				restoreSuspendedLevelFromKeyRoom();
 				return;
 			}
 		}
 		else
 		{
-           spawnAtDoorInLoadedLevel = hasDoorTarget;
+			// Entering key room from normal level: suspend level first.
+			suspendCurrentLevelForKeyRoom();
+			spawnAtDoorInLoadedLevel = hasDoorTarget;
 			loadLevel(0);
 			return;
 		}
@@ -721,6 +732,10 @@ void Scene::resetForNewGame()
 
 void Scene::loadLevel(int levelNum)
 {
+	// Normal transitions should respawn, so discard any suspended snapshot.
+	if(levelNum != 0)
+		clearSuspendedLevel();
+
  if(map != NULL)
 	{
 		delete map;
@@ -798,5 +813,102 @@ int Scene::findClosestDoorIndex(const glm::ivec2 &playerTilePos) const
 bool Scene::isGodMode() const
 {
 	return godMode;
+}
+
+void Scene::clearSuspendedLevel()
+{
+	if(suspendedMap != NULL)
+	{
+		delete suspendedMap;
+		suspendedMap = NULL;
+	}
+	if(suspendedPlayer != NULL)
+	{
+		delete suspendedPlayer;
+		suspendedPlayer = NULL;
+	}
+
+	for(int i=0; i<int(suspendedDoors.size()); ++i) delete suspendedDoors[i];
+	for(int i=0; i<int(suspendedKeys.size()); ++i) delete suspendedKeys[i];
+	for(int i=0; i<int(suspendedWeights.size()); ++i) delete suspendedWeights[i];
+	for(int i=0; i<int(suspendedBombs.size()); ++i) delete suspendedBombs[i];
+	for(int i=0; i<int(suspendedEnemies.size()); ++i) delete suspendedEnemies[i];
+
+	suspendedDoors.clear();
+	suspendedKeys.clear();
+	suspendedWeights.clear();
+	suspendedBombs.clear();
+	suspendedEnemies.clear();
+	suspendedWeightPushLatch.clear();
+
+	hasSuspendedLevel = false;
+	suspendedLevelNum = -1;
+}
+
+void Scene::suspendCurrentLevelForKeyRoom()
+{
+	if(hasSuspendedLevel)
+		return;
+
+	hasSuspendedLevel = true;
+	suspendedLevelNum = currentLevelNum;
+
+	suspendedMap = map;           map = NULL;
+	suspendedPlayer = player;     player = NULL;
+
+	suspendedDoors.swap(doors);
+	suspendedKeys.swap(keys);
+	suspendedWeights.swap(weights);
+	suspendedBombs.swap(bombs);
+	suspendedEnemies.swap(Enemies);
+	suspendedWeightPushLatch.swap(weightPushLatch);
+}
+
+void Scene::restoreSuspendedLevelFromKeyRoom()
+{
+	if(!hasSuspendedLevel)
+		return;
+
+	// Destroy current key-room objects
+	if(map != NULL) { delete map; map = NULL; }
+	if(player != NULL) { delete player; player = NULL; }
+
+	freeDoors();
+	freeKeys();
+	freeEnemies();
+	for(int i=0; i<int(weights.size()); ++i) delete weights[i];
+	weights.clear();
+	freeBombs();
+
+	// Restore suspended level
+	map = suspendedMap;               suspendedMap = NULL;
+	player = suspendedPlayer;         suspendedPlayer = NULL;
+	doors.swap(suspendedDoors);
+	keys.swap(suspendedKeys);
+	weights.swap(suspendedWeights);
+	bombs.swap(suspendedBombs);
+	Enemies.swap(suspendedEnemies);
+	weightPushLatch.swap(suspendedWeightPushLatch);
+
+	currentLevelNum = suspendedLevelNum;
+
+	if(player != NULL && map != NULL)
+	{
+		player->setTileMap(map);
+		player->setPosition(glm::vec2(
+			float(returnTilePos.x * map->getTileSize()),
+			float(returnTilePos.y * map->getTileSize())));
+		player->startDoorExitAnimation();
+
+		projection = glm::ortho(
+			0.f,
+			float(map->getMapSize().x * map->getTileSize()),
+			float(map->getMapSize().y * map->getTileSize()),
+			0.f);
+	}
+
+	Enemy::Unfreeze();
+	hasSuspendedLevel = false;
+	suspendedLevelNum = -1;
 }
 

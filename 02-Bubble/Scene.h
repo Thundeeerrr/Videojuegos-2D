@@ -48,6 +48,10 @@ private:
     void freeBombs();
 	int findClosestDoorIndex(const glm::ivec2 &playerTilePos) const;
 
+	void suspendCurrentLevelForKeyRoom();
+	void restoreSuspendedLevelFromKeyRoom();
+	void clearSuspendedLevel();
+
 private:
 	TileMap *map;
 	Player *player;
@@ -83,6 +87,18 @@ private:
   std::vector<EnemyExplosion> enemyExplosions;
   int remainingLives;
 	static const int MAX_LIVES = 3;
+
+	// Suspended level state (used only for key-room round trips).
+	bool hasSuspendedLevel;
+	int suspendedLevelNum;
+	TileMap *suspendedMap;
+	Player *suspendedPlayer;
+	std::vector<Door*> suspendedDoors;
+	std::vector<Key*> suspendedKeys;
+	std::vector<Pushable*> suspendedWeights;
+	std::vector<Bomb*> suspendedBombs;
+	std::vector<Enemy*> suspendedEnemies;
+	std::vector<bool> suspendedWeightPushLatch;
 };
 
 

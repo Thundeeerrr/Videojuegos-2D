@@ -1,6 +1,6 @@
 #include <cmath>
 #include "DonaldEnemy.h"
-#include <iostream>
+
 const char* DonaldEnemy::getTextureFile() const
 {
 	return "images/PatoDonald-Sprites.png";
@@ -36,60 +36,75 @@ void DonaldEnemy::moveTowardTile(const glm::ivec2& bugsTilePos, int stepPx)
 	const int dx = bugsTilePos.x - myTile.x;
 	const int dy = bugsTilePos.y - myTile.y;
 
-	const glm::ivec2 pos(int(getPosition().x), int(getPosition().y));
-	const bool onVine = map->isStairTileForBody(pos, glm::ivec2(COLLISION_W_PX, COLLISION_H_PX));
-
 	auto sgn = [](int v) -> int { return (v < 0) ? -1 : ((v > 0) ? 1 : 0); };
 
-	if(std::abs(dy) > std::abs(dx))
-	{
-		if(onVine)
-		{
-			// Align enemy center to current vine column center before vertical movement.
-			const int tileSize = map->getTileSize();
-			const int enemyCenterX = pos.x + (COLLISION_W_PX / 2);
-			const int vineTileX = enemyCenterX / tileSize;
-			const int vineCenterX = vineTileX * tileSize + (tileSize / 2);
-			const int targetPosX = vineCenterX - (COLLISION_W_PX / 2);
-			const int alignDx = targetPosX - pos.x;
+	const glm::ivec2 bodySize(COLLISION_W_PX, COLLISION_H_PX);
+	const glm::ivec2 posBefore(int(getPosition().x), int(getPosition().y));
+	const bool onVine = map->isStairTileForBody(posBefore, bodySize);
 
-			if(alignDx != 0)
-				moveHorizontal(sgn(alignDx), stepPx);
-			else
-				moveVertical(sgn(dy), stepPx);
-		}
-		else if(dx != 0)
-		{
-			moveHorizontal(sgn(dx), stepPx);
-		}
+	// If we are on vine and there is vertical gap, use it.
+	if(onVine && dy != 0)
+	{
+		moveVertical(sgn(dy), stepPx);
+
+		const glm::ivec2 posAfter(int(getPosition().x), int(getPosition().y));
+		const bool verticalMoved = (posAfter.y != posBefore.y);
+
+		// If blocked at vine top/bottom, leave vine horizontally.
+		if(!verticalMoved)
+			moveHorizontal(facingRight ? 1 : -1, stepPx);
+
 		return;
 	}
 
+	// Horizontal-first policy with anti-flip dead-zone:
+	// while vertical gap exists, avoid immediate turnaround near aligned X.
+	if(dy != 0)
+	{
+		int dirX;
+		if(std::abs(dx) > 1) dirX = sgn(dx);
+		else                 dirX = facingRight ? 1 : -1;
+
+		moveHorizontal(dirX, stepPx);
+		return;
+	}
+
+	// Same height: normal horizontal chase.
 	if(dx != 0)
 		moveHorizontal(sgn(dx), stepPx);
 }
 
 void DonaldEnemy::stepAI(int deltaTime, const glm::ivec2 &bugsTilePos)
 {
+	const glm::ivec2 myTile = getMyTile();
+	const int dx = bugsTilePos.x - myTile.x;
+	const int dy = bugsTilePos.y - myTile.y;
+	const int manhattanDist = std::abs(dx) + std::abs(dy);
+
+	// Distance-based pursuit to keep behavior stable.
+	// Multiplier 2 keeps Donald reactive without global-map tracking.
+	const int pursuitRangeTiles = getVisionRangeTiles() * 2;
+	const bool shouldChase = (manhattanDist <= pursuitRangeTiles);
+
 	switch(getState())
 	{
 		case State::PATROL:
 		{
-			if(canSeeBugs(bugsTilePos))
+			if(shouldChase)
 			{
-				setState(State::CHASE); // important
+				setState(State::CHASE);
 				setLastSeenBugsTile(bugsTilePos);
 				setSearchTimerMs(0);
 				moveTowardTile(bugsTilePos);
-				break;
 			}
-			patrolStep();
+			else
+				patrolStep();
 			break;
 		}
 
 		case State::CHASE:
 		{
-			if(canSeeBugs(bugsTilePos))
+			if(shouldChase)
 			{
 				setLastSeenBugsTile(bugsTilePos);
 				setSearchTimerMs(0);
@@ -105,24 +120,24 @@ void DonaldEnemy::stepAI(int deltaTime, const glm::ivec2 &bugsTilePos)
 
 		case State::SEARCH:
 		{
-			if(canSeeBugs(bugsTilePos))
+			if(shouldChase)
 			{
 				setState(State::CHASE);
 				setLastSeenBugsTile(bugsTilePos);
 				setSearchTimerMs(0);
 				moveTowardTile(bugsTilePos);
-				break;
 			}
-
-			setSearchTimerMs(getSearchTimerMs() - deltaTime);
-			if(getSearchTimerMs() <= 0)
+			else
 			{
-				setState(State::PATROL);
-				pickPatrolDirection();
-				break;
+				setSearchTimerMs(getSearchTimerMs() - deltaTime);
+				if(getSearchTimerMs() <= 0)
+				{
+					setState(State::PATROL);
+					pickPatrolDirection();
+				}
+				else
+					moveTowardTile(getLastSeenBugsTile());
 			}
-
-			moveTowardTile(getLastSeenBugsTile());
 			break;
 		}
 	}

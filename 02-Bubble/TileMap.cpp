@@ -453,11 +453,8 @@ bool TileMap::collisionMoveDown(const glm::ivec2 &pos, const glm::ivec2 &size, i
 		if (tryToClimbDown) cout << "Trying to climb down. Checking tile at (" << x << ", " << y << ") with tile ID: " << tile << endl;
 		if(collidedTiles.find(tile) != collidedTiles.end() || tile == -2)
 		{
-			if (*posY - tileSize * y + size.y <= 4)
-			{
 				*posY = tileSize * y - size.y;
 				return true;
-			}
 			//return true;
 		}
 	}

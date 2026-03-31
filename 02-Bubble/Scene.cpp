@@ -61,6 +61,7 @@ Scene::~Scene()
 		delete player;
    freeDoors();
    freeKeys();
+   freeEnemies();
 }
 
 
@@ -69,6 +70,7 @@ void Scene::init(const std::string &sceneName)
 	initShaders();
 	freeDoors();
 	freeKeys();
+	freeEnemies();
 	map = TileMap::createTileMap(sceneName, glm::vec2(SCREEN_X, SCREEN_Y), texProgram);
  map->clearDoorLinks();
    if(currentLevelNum == 2)
@@ -103,6 +105,14 @@ void Scene::init(const std::string &sceneName)
 	}
 	player = new Player();
 	player->init(glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
+	for (int i = 0; i < 1; ++i)
+	{
+		cout << "Initializing enemy " << i << endl;
+		if (currentLevelNum == 0)	break;
+		Enemies.push_back(new Enemy());
+		Enemies[i]->init(Enemy::Type::DONALD, glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
+		Enemies[i]->setTileMap(map);
+	}
     bool shouldPlayDoorExitAnimation = false;
     bool shouldKeepSpawnDoorOpen = false;
  glm::ivec2 spawnTile(INIT_PLAYER_X_TILES, INIT_PLAYER_Y_TILES);
@@ -187,12 +197,11 @@ void Scene::update(int deltaTime)
 
 	glm::vec2 playerPos = player->getPosition();
 	glm::ivec2 playerTilePos((int(playerPos.x) + 8) / map->getTileSize(),(int(playerPos.y) + 15) / map->getTileSize());
-
+	for (int i = 0; i < Enemies.size(); ++i)	Enemies[i]->update(deltaTime, playerPos);
 	for (int i = 0; i < int(keys.size()); )
 	{
 		if (keys[i]->getTilePos() == playerTilePos)
 		{
-			cout << "Key collected at tile (" << playerTilePos.x << ", " << playerTilePos.y << ")" << endl;
 			player->addKey();
 			map->removeKeyAtTile(keys[i]->getTilePos());
 			delete keys[i];
@@ -326,6 +335,8 @@ void Scene::render()
    for(int i=0; i<int(keys.size()); ++i)
 		keys[i]->render();
 	player->render();
+   for (int i = 0; i < int(Enemies.size()); ++i)
+		Enemies[i]->render();
 }
 
 void Scene::freeDoors()
@@ -340,6 +351,13 @@ void Scene::freeKeys()
 	for(int i=0; i<int(keys.size()); ++i)
 		delete keys[i];
 	keys.clear();
+}
+
+void Scene::freeEnemies()
+{
+	for(int i=0; i<int(Enemies.size()); ++i)
+		delete Enemies[i];
+	Enemies.clear();
 }
 
 void Scene::initShaders()

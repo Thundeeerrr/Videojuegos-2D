@@ -10,7 +10,7 @@
 #include "Player.h"
 #include "Door.h"
 #include "Key.h"
-
+#include "Enemy.h"
 
 // Scene contains all the entities of our game.
 // It is responsible for updating and render them.
@@ -36,6 +36,7 @@ private:
 	void initShaders();
 	void freeDoors();
     void freeKeys();
+	void freeEnemies();
 	int findClosestDoorIndex(const glm::ivec2 &playerTilePos) const;
 
 private:
@@ -57,7 +58,7 @@ private:
 	int returnLevelNum;
 	glm::ivec2 returnTilePos;
 	std::map<int, std::vector<glm::ivec2> > openedDoorsByLevel;
-
+	vector<Enemy*> Enemies;
 	bool godMode;
 };
 

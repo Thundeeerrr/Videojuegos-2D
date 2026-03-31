@@ -14,6 +14,7 @@
     <ClInclude Include="AnimKeyframes.h" />
     <ClInclude Include="Credits.h" />
     <ClInclude Include="Door.h" />
+    <ClInclude Include="Enemy.h" />
     <ClInclude Include="Game.h" />
     <ClInclude Include="Instructions.h" />
     <ClInclude Include="Intro.h" />
@@ -25,11 +26,12 @@
     <ClInclude Include="Sprite.h" />
     <ClInclude Include="Texture.h" />
     <ClInclude Include="TileMap.h" />
-	<ClInclude Include="Key.h" />
+    <ClInclude Include="Key.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Credits.cpp" />
     <ClCompile Include="Door.cpp" />
+    <ClCompile Include="Enemy.cpp" />
     <ClCompile Include="Game.cpp" />
     <ClCompile Include="Instructions.cpp" />
     <ClCompile Include="Intro.cpp" />
@@ -42,7 +44,7 @@
     <ClCompile Include="Sprite.cpp" />
     <ClCompile Include="Texture.cpp" />
     <ClCompile Include="TileMap.cpp" />
-	<ClCompile Include="Key.cpp" />
+    <ClCompile Include="Key.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="docs\main_menu.md">

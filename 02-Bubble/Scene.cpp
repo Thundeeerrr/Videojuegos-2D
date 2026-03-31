@@ -27,6 +27,9 @@ namespace
 	const int EXPLOSION_TILE_SIZE_PX = 16;
 	const int EXPLOSION_FRAME_COUNT = 5;
 	const int EXPLOSION_DURATION_MS = 400;
+  const int GAME_OVER_DURATION_MS = 5000;
+	const int GAME_OVER_APPEAR_TIME_MS = 700;
+	const float GAME_OVER_DARKEN_FACTOR = 0.45f;
 	const int HUD_BOMB_ICON_SIZE_PX = 16;
 	const int HUD_ICON_SPACING_PX = 15;
     const int HUD_BOMB_ROW_Y_PX = 16;
@@ -93,6 +96,10 @@ Scene::~Scene()
 		glDeleteVertexArrays(1, &explosionVao);
 	if(explosionVbo != 0)
 		glDeleteBuffers(1, &explosionVbo);
+   if(gameOverVao != 0)
+		glDeleteVertexArrays(1, &gameOverVao);
+	if(gameOverVbo != 0)
+		glDeleteBuffers(1, &gameOverVbo);
   if(bombHudVao != 0)
 		glDeleteVertexArrays(1, &bombHudVao);
 	if(bombHudVbo != 0)
@@ -160,6 +167,8 @@ void Scene::init(const std::string &sceneName)
 	}
   weightPushLatch.assign(weights.size(), false);
   playerDeathActive = false;
+    gameOverActive = false;
+	gameOverTimerMs = 0;
 	enemyExplosions.clear();
 	spaceWasPressed = false;
 
@@ -210,6 +219,34 @@ void Scene::init(const std::string &sceneName)
 	glBufferData(GL_ARRAY_BUFFER, sizeof(bombHudVertices), bombHudVertices, GL_STATIC_DRAW);
 	bombHudPosLocation = texProgram.bindVertexAttribute("position", 2, 4 * sizeof(float), 0);
 	bombHudTexCoordLocation = texProgram.bindVertexAttribute("texCoord", 2, 4 * sizeof(float), (void *)(2 * sizeof(float)));
+
+	gameOverTexture.loadFromFile("images/Game over.png", TEXTURE_PIXEL_FORMAT_RGBA);
+	gameOverTexture.setWrapS(GL_CLAMP_TO_EDGE);
+	gameOverTexture.setWrapT(GL_CLAMP_TO_EDGE);
+	gameOverTexture.setMinFilter(GL_NEAREST);
+	gameOverTexture.setMagFilter(GL_NEAREST);
+
+	if(gameOverVao != 0)
+		glDeleteVertexArrays(1, &gameOverVao);
+	if(gameOverVbo != 0)
+		glDeleteBuffers(1, &gameOverVbo);
+
+  const float mapPixelW = map->getMapSize().x * map->getTileSize();
+	const float mapPixelH = map->getMapSize().y * map->getTileSize();
+	float gameOverVertices[16] = {
+		0.f, 0.f, 0.f, 0.f,
+      mapPixelW, 0.f, 1.f, 0.f,
+		mapPixelW, mapPixelH, 1.f, 1.f,
+		0.f, mapPixelH, 0.f, 1.f
+	};
+
+	glGenVertexArrays(1, &gameOverVao);
+	glBindVertexArray(gameOverVao);
+	glGenBuffers(1, &gameOverVbo);
+	glBindBuffer(GL_ARRAY_BUFFER, gameOverVbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(gameOverVertices), gameOverVertices, GL_STATIC_DRAW);
+	gameOverPosLocation = texProgram.bindVertexAttribute("position", 2, 4 * sizeof(float), 0);
+	gameOverTexCoordLocation = texProgram.bindVertexAttribute("texCoord", 2, 4 * sizeof(float), (void *)(2 * sizeof(float)));
 	player = new Player();
 	player->init(glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
  player->setLives(remainingLives);
@@ -303,6 +340,19 @@ void Scene::update(int deltaTime)
 
 	for(int i=0; i<int(doors.size()); ++i)
 		doors[i]->update(deltaTime);
+
+	if(gameOverActive)
+	{
+		gameOverTimerMs -= deltaTime;
+		if(gameOverTimerMs <= 0)
+		{
+			gameOverActive = false;
+			remainingLives = MAX_LIVES;
+			Game::instance().changeState(STATE_MENU);
+		}
+		return;
+	}
+
 	for(int i = 0; i < int(enemyExplosions.size()); )
 	{
 		enemyExplosions[i].timerMs -= deltaTime;
@@ -320,8 +370,8 @@ void Scene::update(int deltaTime)
 			--remainingLives;
 			if(remainingLives <= 0)
 			{
-				remainingLives = MAX_LIVES;
-				Game::instance().changeState(STATE_MENU);
+             gameOverActive = true;
+				gameOverTimerMs = GAME_OVER_DURATION_MS;
 			}
 			else
 				loadLevel(currentLevelNum);
@@ -589,7 +639,8 @@ void Scene::render()
 
 	texProgram.use();
 	texProgram.setUniformMatrix4f("projection", projection);
-	texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
+   const float sceneDarken = gameOverActive ? GAME_OVER_DARKEN_FACTOR : 1.f;
+	texProgram.setUniform4f("color", sceneDarken, sceneDarken, sceneDarken, 1.0f);
 	modelview = glm::mat4(1.0f);
 	texProgram.setUniformMatrix4f("modelview", modelview);
 	texProgram.setUniform2f("texCoordDispl", 0.f, 0.f);
@@ -650,6 +701,25 @@ void Scene::render()
 			glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 			glDisable(GL_TEXTURE_2D);
 		}
+	}
+   if(gameOverActive && gameOverVao != 0)
+	{
+       int elapsedMs = GAME_OVER_DURATION_MS - gameOverTimerMs;
+		if(elapsedMs < 0) elapsedMs = 0;
+		float appearAlpha = float(elapsedMs) / float(GAME_OVER_APPEAR_TIME_MS);
+		if(appearAlpha > 1.f) appearAlpha = 1.f;
+
+		texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, appearAlpha);
+		glm::mat4 gameOverModelview = glm::mat4(1.0f);
+		texProgram.setUniformMatrix4f("modelview", gameOverModelview);
+		texProgram.setUniform2f("texCoordDispl", 0.f, 0.f);
+		glEnable(GL_TEXTURE_2D);
+		gameOverTexture.use();
+		glBindVertexArray(gameOverVao);
+		glEnableVertexAttribArray(gameOverPosLocation);
+		glEnableVertexAttribArray(gameOverTexCoordLocation);
+		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+		glDisable(GL_TEXTURE_2D);
 	}
 }
 
@@ -723,6 +793,8 @@ void Scene::giveAllKeys()
 void Scene::resetForNewGame()
 {
 	remainingLives = MAX_LIVES;
+ gameOverActive = false;
+	gameOverTimerMs = 0;
 	openedDoorsByLevel.clear();
 	hasReturnPoint = false;
 	hasSpawnOverride = false;
@@ -751,6 +823,8 @@ void Scene::loadLevel(int levelNum)
 	weights.clear();
   freeBombs();
 	playerDeathActive = false;
+    gameOverActive = false;
+	gameOverTimerMs = 0;
 	enemyExplosions.clear();
 
 	if(levelNum == 0)
@@ -787,6 +861,8 @@ void Scene::loadLevelFile(const std::string &levelPath)
 	}
   freeBombs();
 	playerDeathActive = false;
+    gameOverActive = false;
+	gameOverTimerMs = 0;
 	enemyExplosions.clear();
 
 	init(levelPath);

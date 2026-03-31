@@ -80,10 +80,15 @@ private:
 	Texture explosionTexture;
 	GLuint explosionVao, explosionVbo;
 	GLint explosionPosLocation, explosionTexCoordLocation;
+    Texture gameOverTexture;
+	GLuint gameOverVao, gameOverVbo;
+	GLint gameOverPosLocation, gameOverTexCoordLocation;
  Texture bombHudTexture;
 	GLuint bombHudVao, bombHudVbo;
 	GLint bombHudPosLocation, bombHudTexCoordLocation;
 	bool playerDeathActive;
+  bool gameOverActive;
+	int gameOverTimerMs;
   std::vector<EnemyExplosion> enemyExplosions;
   int remainingLives;
 	static const int MAX_LIVES = 3;

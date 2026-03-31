@@ -27,6 +27,7 @@ namespace
 	const int EXPLOSION_TILE_SIZE_PX = 16;
 	const int EXPLOSION_FRAME_COUNT = 5;
 	const int EXPLOSION_DURATION_MS = 400;
+   const int CLOCK_FREEZE_DURATION_MS = 3000;
   const int GAME_OVER_DURATION_MS = 5000;
 	const int GAME_OVER_APPEAR_TIME_MS = 700;
 	const float GAME_OVER_DARKEN_FACTOR = 0.45f;
@@ -83,6 +84,7 @@ Scene::Scene()
    enemyExplosions.clear();
    remainingLives = MAX_LIVES;
    spaceWasPressed = false;
+  clockFreezeTimerMs = 0;
 	hasSuspendedLevel = false;
 	suspendedLevelNum = -1;
 	suspendedMap = NULL;
@@ -101,6 +103,7 @@ Scene::~Scene()
    freeEnemies();
     freeBombs();
     freeShieldItems();
+    freeClockItems();
    if(explosionVao != 0)
 		glDeleteVertexArrays(1, &explosionVao);
 	if(explosionVbo != 0)
@@ -180,6 +183,13 @@ void Scene::init(const std::string &sceneName)
 		ShieldItem *shieldItem = new ShieldItem();
 		shieldItem->init(shieldTiles[i], texProgram);
 		shieldItems.push_back(shieldItem);
+	}
+    const std::vector<glm::ivec2> &clockTiles = map->getClockPositions();
+	for(int i=0; i<int(clockTiles.size()); ++i)
+	{
+		ClockItem *clockItem = new ClockItem();
+		clockItem->init(clockTiles[i], texProgram);
+		clockItems.push_back(clockItem);
 	}
   weightPushLatch.assign(weights.size(), false);
   playerDeathActive = false;
@@ -368,9 +378,17 @@ void Scene::update(int deltaTime)
 	pWasPressed = pPressed;
 	hWasPressed = hPressed;
 
-	bool dPressed = Game::instance().getKey(GLFW_KEY_D);
-	if (player->isDoorInteractionStarted())	Enemy::Freeze();
-	else	Enemy::Unfreeze();
+    bool dPressed = Game::instance().getKey(GLFW_KEY_D);
+	if(clockFreezeTimerMs > 0)
+	{
+		clockFreezeTimerMs -= deltaTime;
+		if(clockFreezeTimerMs < 0)
+			clockFreezeTimerMs = 0;
+	}
+	if(player->isDoorInteractionStarted() || clockFreezeTimerMs > 0)
+		Enemy::Freeze();
+	else
+		Enemy::Unfreeze();
 	if(dPressed && !dWasPressed)
 	{
 		for(int i=0; i<int(doors.size()); ++i)
@@ -497,6 +515,14 @@ void Scene::update(int deltaTime)
 		{
 			shieldItems[i]->collect();
 			player->activateShield();
+		}
+	}
+ for(int i=0; i<int(clockItems.size()); ++i)
+	{
+		if(!clockItems[i]->isCollected() && collidesWith(playerPos, playerSize, clockItems[i]->getPosition(), clockItems[i]->getSize()))
+		{
+			clockItems[i]->collect();
+			clockFreezeTimerMs = CLOCK_FREEZE_DURATION_MS;
 		}
 	}
 	spaceWasPressed = spacePressed;
@@ -725,6 +751,8 @@ void Scene::render()
 		weights[i]->render();
     for(int i=0; i<int(bombs.size()); ++i)
 		bombs[i]->render();
+    for(int i=0; i<int(clockItems.size()); ++i)
+		clockItems[i]->render();
     for(int i=0; i<int(shieldItems.size()); ++i)
 		shieldItems[i]->render();
    player->render();
@@ -848,6 +876,13 @@ void Scene::freeShieldItems()
 	shieldItems.clear();
 }
 
+void Scene::freeClockItems()
+{
+	for(int i=0; i<int(clockItems.size()); ++i)
+		delete clockItems[i];
+	clockItems.clear();
+}
+
 void Scene::initShaders()
 {
 	Shader vShader, fShader;
@@ -892,6 +927,7 @@ void Scene::resetForNewGame()
 	remainingLives = MAX_LIVES;
  gameOverActive = false;
 	gameOverTimerMs = 0;
+   clockFreezeTimerMs = 0;
  pauseActive = false;
 	pWasPressed = false;
 	hWasPressed = false;
@@ -935,9 +971,11 @@ void Scene::loadLevel(int levelNum)
 	weights.clear();
   freeBombs();
   freeShieldItems();
+  freeClockItems();
 	playerDeathActive = false;
     gameOverActive = false;
 	gameOverTimerMs = 0;
+   clockFreezeTimerMs = 0;
     playerShieldHitInvulnTimerMs = 0;
 	enemyExplosions.clear();
 
@@ -976,9 +1014,11 @@ void Scene::loadLevelFile(const std::string &levelPath)
 	}
   freeBombs();
   freeShieldItems();
+  freeClockItems();
 	playerDeathActive = false;
     gameOverActive = false;
 	gameOverTimerMs = 0;
+   clockFreezeTimerMs = 0;
     playerShieldHitInvulnTimerMs = 0;
 	enemyExplosions.clear();
 
@@ -1026,6 +1066,7 @@ void Scene::clearSuspendedLevel()
 	for(int i=0; i<int(suspendedWeights.size()); ++i) delete suspendedWeights[i];
 	for(int i=0; i<int(suspendedBombs.size()); ++i) delete suspendedBombs[i];
    for(int i=0; i<int(suspendedShieldItems.size()); ++i) delete suspendedShieldItems[i];
+   for(int i=0; i<int(suspendedClockItems.size()); ++i) delete suspendedClockItems[i];
 	for(int i=0; i<int(suspendedEnemies.size()); ++i) delete suspendedEnemies[i];
 
 	suspendedDoors.clear();
@@ -1033,6 +1074,7 @@ void Scene::clearSuspendedLevel()
 	suspendedWeights.clear();
 	suspendedBombs.clear();
    suspendedShieldItems.clear();
+   suspendedClockItems.clear();
 	suspendedEnemies.clear();
 	suspendedWeightPushLatch.clear();
 
@@ -1056,6 +1098,7 @@ void Scene::suspendCurrentLevelForKeyRoom()
 	suspendedWeights.swap(weights);
 	suspendedBombs.swap(bombs);
  suspendedShieldItems.swap(shieldItems);
+ suspendedClockItems.swap(clockItems);
 	suspendedEnemies.swap(Enemies);
 	suspendedWeightPushLatch.swap(weightPushLatch);
 }
@@ -1076,6 +1119,7 @@ void Scene::restoreSuspendedLevelFromKeyRoom()
 	weights.clear();
 	freeBombs();
 	freeShieldItems();
+	freeClockItems();
 
 	// Restore suspended level
 	map = suspendedMap;               suspendedMap = NULL;
@@ -1085,6 +1129,7 @@ void Scene::restoreSuspendedLevelFromKeyRoom()
 	weights.swap(suspendedWeights);
 	bombs.swap(suspendedBombs);
  shieldItems.swap(suspendedShieldItems);
+ clockItems.swap(suspendedClockItems);
 	Enemies.swap(suspendedEnemies);
 	weightPushLatch.swap(suspendedWeightPushLatch);
 

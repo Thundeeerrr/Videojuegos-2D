@@ -26,11 +26,15 @@ namespace
    const int LEVEL05_TUBE_TOP_RENDER_TILE_ID = 196;
 	const int LEVEL05_TUBE_BOTTOM_RENDER_TILE_ID = 154;
 	const int TILE_KEY = 998;
-    const int TILE_WEIGHT_BACKGROUND = 53;
+  const int LEVEL01_MARKER_BACKGROUND_TILE_ID = 53;
+	const int LEVEL02_MARKER_BACKGROUND_TILE_ID = 53;
+	const int LEVEL03_MARKER_BACKGROUND_TILE_ID = 53;
+	const int LEVEL04_MARKER_BACKGROUND_TILE_ID = 53;
+	const int LEVEL05_MARKER_BACKGROUND_TILE_ID = 53;
+	const int DEFAULT_MARKER_BACKGROUND_TILE_ID = 53;
 	const int TILE_BOMB = 983;
+   const int TILE_CLOCK = TileMap::CLOCK_TILE;
     const int TILE_SHIELD = TileMap::SHIELD_TILE;
-	const int TILE_BOMB_BACKGROUND = 53;
-   const int TILE_SHIELD_BACKGROUND = 53;
    const int WARP_TILE_FLOOR_RENDER_ID = 193;
 	const int WARP_TILE_NO_FLOOR_RENDER_ID = 37;
    const int LEVEL01_JUMP_PLATFORM_RENDER_TILE_ID = 142;
@@ -110,6 +114,7 @@ bool TileMap::loadLevel(const string &levelFile)
     jumpPlatformRenderTileId = -1;
     doorTileStairsRenderTileId = -1;
 	doorTileNoStairsRenderTileId = -1;
+    int markerBackgroundTileId = DEFAULT_MARKER_BACKGROUND_TILE_ID;
 	if(tilesheetFile.find("level4-def") != string::npos)
 	{
 		tubeTopRenderTileId = LEVEL04_TUBE_TOP_RENDER_TILE_ID;
@@ -117,6 +122,7 @@ bool TileMap::loadLevel(const string &levelFile)
        jumpPlatformRenderTileId = LEVEL04_JUMP_PLATFORM_RENDER_TILE_ID;
        doorTileNoStairsRenderTileId = LEVEL04_DOOR_NO_STAIRS_RENDER_TILE_ID;
 		doorTileStairsRenderTileId = LEVEL04_DOOR_STAIRS_RENDER_TILE_ID;
+       markerBackgroundTileId = LEVEL04_MARKER_BACKGROUND_TILE_ID;
 	}
     else if(tilesheetFile.find("level5-def") != string::npos)
 	{
@@ -124,15 +130,22 @@ bool TileMap::loadLevel(const string &levelFile)
 		tubeBottomRenderTileId = LEVEL05_TUBE_BOTTOM_RENDER_TILE_ID;
        doorTileNoStairsRenderTileId = LEVEL05_DOOR_NO_STAIRS_RENDER_TILE_ID;
 		doorTileStairsRenderTileId = LEVEL05_DOOR_STAIRS_RENDER_TILE_ID;
+       markerBackgroundTileId = LEVEL05_MARKER_BACKGROUND_TILE_ID;
 	}
    else if(tilesheetFile.find("level1") != string::npos)
 	{
 		jumpPlatformRenderTileId = LEVEL01_JUMP_PLATFORM_RENDER_TILE_ID;
+       markerBackgroundTileId = LEVEL01_MARKER_BACKGROUND_TILE_ID;
 	}
    else if(tilesheetFile.find("level2") != string::npos)
 	{
 		doorTileNoStairsRenderTileId = LEVEL02_DOOR_NO_STAIRS_RENDER_TILE_ID;
 		doorTileStairsRenderTileId = LEVEL02_DOOR_STAIRS_RENDER_TILE_ID;
+       markerBackgroundTileId = LEVEL02_MARKER_BACKGROUND_TILE_ID;
+	}
+	else if(tilesheetFile.find("level3") != string::npos)
+	{
+		markerBackgroundTileId = LEVEL03_MARKER_BACKGROUND_TILE_ID;
 	}
 	tilesheet.loadFromFile(tilesheetFile, TEXTURE_PIXEL_FORMAT_RGBA);
 	tilesheet.setWrapS(GL_CLAMP_TO_EDGE);
@@ -159,6 +172,7 @@ bool TileMap::loadLevel(const string &levelFile)
 	vector<glm::ivec2> tubeDBottomTiles;
 	keyPositions.clear();
    weightPositions.clear();
+  clockPositions.clear();
   shieldPositions.clear();
 	bombPositions.clear();
 	getline(fin, line);
@@ -239,22 +253,27 @@ bool TileMap::loadLevel(const string &levelFile)
             else if(tileId == TILE_KEY)
 			{
 				keyPositions.insert(glm::ivec2(i, j));
-				map[j * mapSize.x + i] = map[j * mapSize.x + i - 1];
+                map[j * mapSize.x + i] = markerBackgroundTileId;
 			}
             else if(tileId == WEIGHT_TILE)
 			{
 				weightPositions.push_back(glm::ivec2(i, j));
-               map[j * mapSize.x + i] = TILE_WEIGHT_BACKGROUND;
+             map[j * mapSize.x + i] = markerBackgroundTileId;
+			}
+          else if(tileId == TILE_CLOCK)
+			{
+				clockPositions.push_back(glm::ivec2(i, j));
+             map[j * mapSize.x + i] = markerBackgroundTileId;
 			}
             else if(tileId == TILE_SHIELD)
 			{
 				shieldPositions.push_back(glm::ivec2(i, j));
-				map[j * mapSize.x + i] = TILE_SHIELD_BACKGROUND;
+                map[j * mapSize.x + i] = markerBackgroundTileId;
 			}
 			else if(tileId == TILE_BOMB)
 			{
 				bombPositions.push_back(glm::ivec2(i, j));
-				map[j * mapSize.x + i] = TILE_BOMB_BACKGROUND;
+              map[j * mapSize.x + i] = markerBackgroundTileId;
 			}
 			else
 				map[j * mapSize.x + i] = tileId;

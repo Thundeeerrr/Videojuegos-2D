@@ -13,6 +13,7 @@
 #include "Enemy.h"
 #include "Pushable.h"
 #include "Bomb.h"
+#include "ShieldItem.h"
 
 // Scene contains all the entities of our game.
 // It is responsible for updating and render them.
@@ -47,6 +48,7 @@ private:
     void freeKeys();
 	void freeEnemies();
     void freeBombs();
+    void freeShieldItems();
 	int findClosestDoorIndex(const glm::ivec2 &playerTilePos) const;
 
 	void suspendCurrentLevelForKeyRoom();
@@ -60,6 +62,7 @@ private:
    std::vector<Key*> keys;
     std::vector<Pushable*> weights;
    std::vector<Bomb*> bombs;
+   std::vector<ShieldItem*> shieldItems;
 	ShaderProgram texProgram;
 	float currentTime;
 	glm::mat4 projection;
@@ -92,6 +95,7 @@ private:
 	bool playerDeathActive;
   bool gameOverActive;
 	int gameOverTimerMs;
+ int playerShieldHitInvulnTimerMs;
   bool pauseActive;
 	bool pWasPressed;
 	bool hWasPressed;
@@ -108,6 +112,7 @@ private:
 	std::vector<Key*> suspendedKeys;
 	std::vector<Pushable*> suspendedWeights;
 	std::vector<Bomb*> suspendedBombs;
+   std::vector<ShieldItem*> suspendedShieldItems;
 	std::vector<Enemy*> suspendedEnemies;
 	std::vector<bool> suspendedWeightPushLatch;
 };

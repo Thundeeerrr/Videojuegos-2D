@@ -30,6 +30,7 @@ namespace
   const int GAME_OVER_DURATION_MS = 5000;
 	const int GAME_OVER_APPEAR_TIME_MS = 700;
 	const float GAME_OVER_DARKEN_FACTOR = 0.45f;
+    const int SHIELD_HIT_INVULN_TIME_MS = 600;
    const float PAUSE_MENU_DARKEN_FACTOR = 0.45f;
 	const int HUD_BOMB_ICON_SIZE_PX = 16;
 	const int HUD_ICON_SPACING_PX = 15;
@@ -75,6 +76,7 @@ Scene::Scene()
 	playerDeathActive = false;
  gameOverActive = false;
 	gameOverTimerMs = 0;
+    playerShieldHitInvulnTimerMs = 0;
 	pauseActive = false;
 	pWasPressed = false;
 	hWasPressed = false;
@@ -98,6 +100,7 @@ Scene::~Scene()
    freeKeys();
    freeEnemies();
     freeBombs();
+    freeShieldItems();
    if(explosionVao != 0)
 		glDeleteVertexArrays(1, &explosionVao);
 	if(explosionVbo != 0)
@@ -170,6 +173,13 @@ void Scene::init(const std::string &sceneName)
 		Bomb *bomb = new Bomb();
 		bomb->init(bombTiles[i], texProgram);
 		bombs.push_back(bomb);
+	}
+    const std::vector<glm::ivec2> &shieldTiles = map->getShieldPositions();
+	for(int i=0; i<int(shieldTiles.size()); ++i)
+	{
+		ShieldItem *shieldItem = new ShieldItem();
+		shieldItem->init(shieldTiles[i], texProgram);
+		shieldItems.push_back(shieldItem);
 	}
   weightPushLatch.assign(weights.size(), false);
   playerDeathActive = false;
@@ -371,6 +381,13 @@ void Scene::update(int deltaTime)
 	for(int i=0; i<int(doors.size()); ++i)
 		doors[i]->update(deltaTime);
 
+	if(playerShieldHitInvulnTimerMs > 0)
+	{
+		playerShieldHitInvulnTimerMs -= deltaTime;
+		if(playerShieldHitInvulnTimerMs < 0)
+			playerShieldHitInvulnTimerMs = 0;
+	}
+
 	if(gameOverActive)
 	{
 		gameOverTimerMs -= deltaTime;
@@ -474,6 +491,14 @@ void Scene::update(int deltaTime)
 		if(bombs[i]->canBeCollected() && collidesWith(playerPos, playerSize, bombs[i]->getPosition(), bombs[i]->getSize()))
 			bombs[i]->collect();
 	}
+ for(int i=0; i<int(shieldItems.size()); ++i)
+	{
+		if(!shieldItems[i]->isCollected() && collidesWith(playerPos, playerSize, shieldItems[i]->getPosition(), shieldItems[i]->getSize()))
+		{
+			shieldItems[i]->collect();
+			player->activateShield();
+		}
+	}
 	spaceWasPressed = spacePressed;
 
 	glm::ivec2 playerTilePos((int(playerPos.x) + 8) / map->getTileSize(),(int(playerPos.y) + 15) / map->getTileSize());
@@ -526,7 +551,7 @@ void Scene::update(int deltaTime)
 			++i;
 	}
 
-	if(!godMode && !playerDeathActive)
+  if(!godMode && !playerDeathActive && playerShieldHitInvulnTimerMs == 0)
 	{
 		glm::vec2 playerPosNow = player->getPosition();
 		glm::ivec2 playerSizeNow = player->getSize();
@@ -534,8 +559,16 @@ void Scene::update(int deltaTime)
 		{
 			if(collidesWith(playerPosNow, playerSizeNow, Enemies[i]->getPosition(), Enemies[i]->getCollisionSize()))
 			{
-				playerDeathActive = true;
-             player->startDeathAnimation();
+               if(player->hasShield())
+                {
+					player->consumeShield();
+                    playerShieldHitInvulnTimerMs = SHIELD_HIT_INVULN_TIME_MS;
+				}
+				else
+				{
+					playerDeathActive = true;
+					player->startDeathAnimation();
+				}
 				break;
 			}
 		}
@@ -692,6 +725,8 @@ void Scene::render()
 		weights[i]->render();
     for(int i=0; i<int(bombs.size()); ++i)
 		bombs[i]->render();
+    for(int i=0; i<int(shieldItems.size()); ++i)
+		shieldItems[i]->render();
    player->render();
     if(bombHudVao != 0)
 	{
@@ -806,6 +841,13 @@ void Scene::freeBombs()
 	bombs.clear();
 }
 
+void Scene::freeShieldItems()
+{
+	for(int i=0; i<int(shieldItems.size()); ++i)
+		delete shieldItems[i];
+	shieldItems.clear();
+}
+
 void Scene::initShaders()
 {
 	Shader vShader, fShader;
@@ -892,9 +934,11 @@ void Scene::loadLevel(int levelNum)
 		delete weights[i];
 	weights.clear();
   freeBombs();
+  freeShieldItems();
 	playerDeathActive = false;
     gameOverActive = false;
 	gameOverTimerMs = 0;
+    playerShieldHitInvulnTimerMs = 0;
 	enemyExplosions.clear();
 
 	if(levelNum == 0)
@@ -931,9 +975,11 @@ void Scene::loadLevelFile(const std::string &levelPath)
 		player = NULL;
 	}
   freeBombs();
+  freeShieldItems();
 	playerDeathActive = false;
     gameOverActive = false;
 	gameOverTimerMs = 0;
+    playerShieldHitInvulnTimerMs = 0;
 	enemyExplosions.clear();
 
 	init(levelPath);
@@ -979,12 +1025,14 @@ void Scene::clearSuspendedLevel()
 	for(int i=0; i<int(suspendedKeys.size()); ++i) delete suspendedKeys[i];
 	for(int i=0; i<int(suspendedWeights.size()); ++i) delete suspendedWeights[i];
 	for(int i=0; i<int(suspendedBombs.size()); ++i) delete suspendedBombs[i];
+   for(int i=0; i<int(suspendedShieldItems.size()); ++i) delete suspendedShieldItems[i];
 	for(int i=0; i<int(suspendedEnemies.size()); ++i) delete suspendedEnemies[i];
 
 	suspendedDoors.clear();
 	suspendedKeys.clear();
 	suspendedWeights.clear();
 	suspendedBombs.clear();
+   suspendedShieldItems.clear();
 	suspendedEnemies.clear();
 	suspendedWeightPushLatch.clear();
 
@@ -1007,6 +1055,7 @@ void Scene::suspendCurrentLevelForKeyRoom()
 	suspendedKeys.swap(keys);
 	suspendedWeights.swap(weights);
 	suspendedBombs.swap(bombs);
+ suspendedShieldItems.swap(shieldItems);
 	suspendedEnemies.swap(Enemies);
 	suspendedWeightPushLatch.swap(weightPushLatch);
 }
@@ -1026,6 +1075,7 @@ void Scene::restoreSuspendedLevelFromKeyRoom()
 	for(int i=0; i<int(weights.size()); ++i) delete weights[i];
 	weights.clear();
 	freeBombs();
+	freeShieldItems();
 
 	// Restore suspended level
 	map = suspendedMap;               suspendedMap = NULL;
@@ -1034,6 +1084,7 @@ void Scene::restoreSuspendedLevelFromKeyRoom()
 	keys.swap(suspendedKeys);
 	weights.swap(suspendedWeights);
 	bombs.swap(suspendedBombs);
+ shieldItems.swap(suspendedShieldItems);
 	Enemies.swap(suspendedEnemies);
 	weightPushLatch.swap(suspendedWeightPushLatch);
 

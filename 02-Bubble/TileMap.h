@@ -41,6 +41,7 @@ public:
 	static const int DOOR_TILE_STAIRS = 986;
 	static const int DOOR_TILE_NO_STAIRS = 985;
 	static const int WEIGHT_TILE = 984;
+	static const int SHIELD_TILE = 982;
 
 	// Tile maps can only be created inside an OpenGL context
 	static TileMap *createTileMap(const string &levelFile, const glm::vec2 &minCoords, ShaderProgram &program);
@@ -69,6 +70,7 @@ public:
 	const vector<glm::ivec2> &getDoorPositions() const { return doorPositions; }
 	const std::unordered_set<glm::ivec2, IVec2Hash>& getKeyPositions() const { return keyPositions; }
     const vector<glm::ivec2> &getWeightPositions() const { return weightPositions; }
+    const vector<glm::ivec2> &getShieldPositions() const { return shieldPositions; }
     const vector<glm::ivec2> &getBombPositions() const { return bombPositions; }
 	void removeKeyAtTile(const glm::ivec2& tilePos);
 	int getTile(int x, int y) const;
@@ -101,6 +103,7 @@ private:
 	set<int> collidedTiles;
 	vector<glm::ivec2> doorPositions;
    vector<glm::ivec2> weightPositions;
+    vector<glm::ivec2> shieldPositions;
    vector<glm::ivec2> bombPositions;
 	vector<TubePair> tubeConnections;
 	vector<glm::ivec2> tubeAlwaysBottomRenderTiles;

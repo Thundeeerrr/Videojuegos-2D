@@ -83,14 +83,18 @@ private:
     Texture gameOverTexture;
 	GLuint gameOverVao, gameOverVbo;
 	GLint gameOverPosLocation, gameOverTexCoordLocation;
- Texture bombHudTexture;
+    Texture pauseMenuTexture;
+	Texture bombHudTexture;
 	GLuint bombHudVao, bombHudVbo;
 	GLint bombHudPosLocation, bombHudTexCoordLocation;
 	bool playerDeathActive;
   bool gameOverActive;
 	int gameOverTimerMs;
-  std::vector<EnemyExplosion> enemyExplosions;
-  int remainingLives;
+  bool pauseActive;
+	bool pWasPressed;
+	bool hWasPressed;
+	std::vector<EnemyExplosion> enemyExplosions;
+	int remainingLives;
 	static const int MAX_LIVES = 3;
 
 	// Suspended level state (used only for key-room round trips).

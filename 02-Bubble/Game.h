@@ -61,6 +61,7 @@ private:
   Instructions instructions;
 	Menu menu;
 	Scene scene;
+	GameState instructionsReturnState;
 
 	bool insideRoom;
 };

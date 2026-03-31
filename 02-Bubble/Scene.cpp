@@ -30,6 +30,7 @@ namespace
   const int GAME_OVER_DURATION_MS = 5000;
 	const int GAME_OVER_APPEAR_TIME_MS = 700;
 	const float GAME_OVER_DARKEN_FACTOR = 0.45f;
+   const float PAUSE_MENU_DARKEN_FACTOR = 0.45f;
 	const int HUD_BOMB_ICON_SIZE_PX = 16;
 	const int HUD_ICON_SPACING_PX = 15;
     const int HUD_BOMB_ROW_Y_PX = 16;
@@ -72,6 +73,11 @@ Scene::Scene()
 	bombHudPosLocation = -1;
 	bombHudTexCoordLocation = -1;
 	playerDeathActive = false;
+ gameOverActive = false;
+	gameOverTimerMs = 0;
+	pauseActive = false;
+	pWasPressed = false;
+	hWasPressed = false;
    enemyExplosions.clear();
    remainingLives = MAX_LIVES;
    spaceWasPressed = false;
@@ -247,6 +253,12 @@ void Scene::init(const std::string &sceneName)
 	glBufferData(GL_ARRAY_BUFFER, sizeof(gameOverVertices), gameOverVertices, GL_STATIC_DRAW);
 	gameOverPosLocation = texProgram.bindVertexAttribute("position", 2, 4 * sizeof(float), 0);
 	gameOverTexCoordLocation = texProgram.bindVertexAttribute("texCoord", 2, 4 * sizeof(float), (void *)(2 * sizeof(float)));
+
+	pauseMenuTexture.loadFromFile("images/Pause-Menu.png", TEXTURE_PIXEL_FORMAT_RGBA);
+	pauseMenuTexture.setWrapS(GL_CLAMP_TO_EDGE);
+	pauseMenuTexture.setWrapT(GL_CLAMP_TO_EDGE);
+	pauseMenuTexture.setMinFilter(GL_NEAREST);
+	pauseMenuTexture.setMagFilter(GL_NEAREST);
 	player = new Player();
 	player->init(glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
  player->setLives(remainingLives);
@@ -328,6 +340,24 @@ void Scene::init(const std::string &sceneName)
 void Scene::update(int deltaTime)
 {
 	currentTime += deltaTime;
+    bool pPressed = Game::instance().getKey(GLFW_KEY_P);
+	bool hPressed = Game::instance().getKey(GLFW_KEY_H);
+	if(pPressed && !pWasPressed && !gameOverActive && !playerDeathActive)
+		pauseActive = !pauseActive;
+
+	if(pauseActive)
+	{
+		if(hPressed && !hWasPressed)
+		{
+			Game::instance().changeState(STATE_INSTRUCTIONS);
+		}
+		pWasPressed = pPressed;
+		hWasPressed = hPressed;
+		return;
+	}
+	pWasPressed = pPressed;
+	hWasPressed = hPressed;
+
 	bool dPressed = Game::instance().getKey(GLFW_KEY_D);
 	if (player->isDoorInteractionStarted())	Enemy::Freeze();
 	else	Enemy::Unfreeze();
@@ -639,7 +669,11 @@ void Scene::render()
 
 	texProgram.use();
 	texProgram.setUniformMatrix4f("projection", projection);
-   const float sceneDarken = gameOverActive ? GAME_OVER_DARKEN_FACTOR : 1.f;
+    float sceneDarken = 1.f;
+	if(gameOverActive)
+		sceneDarken = GAME_OVER_DARKEN_FACTOR;
+	else if(pauseActive)
+		sceneDarken = PAUSE_MENU_DARKEN_FACTOR;
 	texProgram.setUniform4f("color", sceneDarken, sceneDarken, sceneDarken, 1.0f);
 	modelview = glm::mat4(1.0f);
 	texProgram.setUniformMatrix4f("modelview", modelview);
@@ -678,8 +712,10 @@ void Scene::render()
 			glDisable(GL_TEXTURE_2D);
 		}
 	}
+    texProgram.setUniform4f("color", sceneDarken, sceneDarken, sceneDarken, 1.0f);
    for (int i = 0; i < int(Enemies.size()); ++i)
 		Enemies[i]->render();
+    texProgram.setUniform4f("color", sceneDarken, sceneDarken, sceneDarken, 1.0f);
    if(explosionVao != 0)
 	{
 		const float frameWidthUv = 1.f / float(EXPLOSION_FRAME_COUNT);
@@ -701,6 +737,20 @@ void Scene::render()
 			glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 			glDisable(GL_TEXTURE_2D);
 		}
+   if(pauseActive && gameOverVao != 0)
+	{
+		texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
+		glm::mat4 pauseModelview = glm::mat4(1.0f);
+		texProgram.setUniformMatrix4f("modelview", pauseModelview);
+		texProgram.setUniform2f("texCoordDispl", 0.f, 0.f);
+		glEnable(GL_TEXTURE_2D);
+		pauseMenuTexture.use();
+		glBindVertexArray(gameOverVao);
+		glEnableVertexAttribArray(gameOverPosLocation);
+		glEnableVertexAttribArray(gameOverTexCoordLocation);
+		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+		glDisable(GL_TEXTURE_2D);
+	}
 	}
    if(gameOverActive && gameOverVao != 0)
 	{
@@ -795,6 +845,9 @@ void Scene::resetForNewGame()
 	remainingLives = MAX_LIVES;
  gameOverActive = false;
 	gameOverTimerMs = 0;
+ pauseActive = false;
+	pWasPressed = false;
+	hWasPressed = false;
 	openedDoorsByLevel.clear();
 	hasReturnPoint = false;
 	hasSpawnOverride = false;

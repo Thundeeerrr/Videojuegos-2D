@@ -24,6 +24,7 @@ void Game::init()
 	credits.init();
  instructions.init();
 	currentState = STATE_INTRO;
+   instructionsReturnState = STATE_MENU;
 }
 
 bool Game::update(int deltaTime)
@@ -108,7 +109,7 @@ void Game::keyPressed(int key)
   else if(currentState == STATE_INSTRUCTIONS)
 	{
       if(key == GLFW_KEY_ESCAPE || key == GLFW_KEY_ENTER || key == GLFW_KEY_KP_ENTER || key == GLFW_KEY_BACKSPACE)
-			changeState(STATE_MENU);
+			changeState(instructionsReturnState);
        return;
 	}
 	else if(currentState == STATE_PLAYING)
@@ -157,7 +158,7 @@ bool Game::getKey(int key) const
 
 void Game::changeState(GameState newState)
 {
-	if(newState == STATE_PLAYING)
+   if(newState == STATE_PLAYING && currentState != STATE_INSTRUCTIONS)
   {
 		scene.resetForNewGame();
 		scene.loadLevel(1);
@@ -167,7 +168,10 @@ void Game::changeState(GameState newState)
 	if(newState == STATE_CREDITS)
 		credits.init();
   if(newState == STATE_INSTRUCTIONS)
+    {
+		instructionsReturnState = currentState;
 		instructions.init();
+  }
 	if(newState == STATE_MENU)
 		menu.init();
 

@@ -12,6 +12,7 @@
 #include "Key.h"
 #include "Enemy.h"
 #include "Pushable.h"
+#include "Bomb.h"
 
 // Scene contains all the entities of our game.
 // It is responsible for updating and render them.
@@ -44,6 +45,7 @@ private:
 	void freeDoors();
     void freeKeys();
 	void freeEnemies();
+    void freeBombs();
 	int findClosestDoorIndex(const glm::ivec2 &playerTilePos) const;
 
 private:
@@ -52,6 +54,7 @@ private:
    std::vector<Door*> doors;
    std::vector<Key*> keys;
     std::vector<Pushable*> weights;
+   std::vector<Bomb*> bombs;
 	ShaderProgram texProgram;
 	float currentTime;
 	glm::mat4 projection;
@@ -69,9 +72,13 @@ private:
 	vector<Enemy*> Enemies;
 	bool godMode;
  std::vector<bool> weightPushLatch;
+	bool spaceWasPressed;
 	Texture explosionTexture;
 	GLuint explosionVao, explosionVbo;
 	GLint explosionPosLocation, explosionTexCoordLocation;
+ Texture bombHudTexture;
+	GLuint bombHudVao, bombHudVbo;
+	GLint bombHudPosLocation, bombHudTexCoordLocation;
 	bool playerDeathActive;
   std::vector<EnemyExplosion> enemyExplosions;
   int remainingLives;

@@ -69,6 +69,7 @@ public:
 	const vector<glm::ivec2> &getDoorPositions() const { return doorPositions; }
 	const std::unordered_set<glm::ivec2, IVec2Hash>& getKeyPositions() const { return keyPositions; }
     const vector<glm::ivec2> &getWeightPositions() const { return weightPositions; }
+    const vector<glm::ivec2> &getBombPositions() const { return bombPositions; }
 	void removeKeyAtTile(const glm::ivec2& tilePos);
 	int getTile(int x, int y) const;
 	std::vector<std::pair<glm::ivec2, glm::ivec2>> getWarpPlatformPairs() const;
@@ -100,6 +101,7 @@ private:
 	set<int> collidedTiles;
 	vector<glm::ivec2> doorPositions;
    vector<glm::ivec2> weightPositions;
+   vector<glm::ivec2> bombPositions;
 	vector<TubePair> tubeConnections;
 	vector<glm::ivec2> tubeAlwaysBottomRenderTiles;
 	int stair;

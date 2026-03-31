@@ -27,6 +27,9 @@ namespace
 	const int EXPLOSION_TILE_SIZE_PX = 16;
 	const int EXPLOSION_FRAME_COUNT = 5;
 	const int EXPLOSION_DURATION_MS = 400;
+	const int HUD_BOMB_ICON_SIZE_PX = 16;
+	const int HUD_ICON_SPACING_PX = 15;
+    const int HUD_BOMB_ROW_Y_PX = 16;
 
 	bool containsDoorTile(const std::vector<glm::ivec2> &tiles, const glm::ivec2 &tile)
 	{
@@ -61,9 +64,14 @@ Scene::Scene()
 	explosionVbo = 0;
 	explosionPosLocation = -1;
 	explosionTexCoordLocation = -1;
+  bombHudVao = 0;
+	bombHudVbo = 0;
+	bombHudPosLocation = -1;
+	bombHudTexCoordLocation = -1;
 	playerDeathActive = false;
    enemyExplosions.clear();
    remainingLives = MAX_LIVES;
+   spaceWasPressed = false;
 }
 
 Scene::~Scene()
@@ -76,10 +84,19 @@ Scene::~Scene()
    freeDoors();
    freeKeys();
    freeEnemies();
+    freeBombs();
    if(explosionVao != 0)
 		glDeleteVertexArrays(1, &explosionVao);
 	if(explosionVbo != 0)
 		glDeleteBuffers(1, &explosionVbo);
+  if(bombHudVao != 0)
+		glDeleteVertexArrays(1, &bombHudVao);
+	if(bombHudVbo != 0)
+		glDeleteBuffers(1, &bombHudVbo);
+   if(bombHudVao != 0)
+		glDeleteVertexArrays(1, &bombHudVao);
+	if(bombHudVbo != 0)
+		glDeleteBuffers(1, &bombHudVbo);
 }
 
 
@@ -89,6 +106,7 @@ void Scene::init(const std::string &sceneName)
 	freeDoors();
 	freeKeys();
 	freeEnemies();
+ freeBombs();
 	map = TileMap::createTileMap(sceneName, glm::vec2(SCREEN_X, SCREEN_Y), texProgram);
  map->clearDoorLinks();
    if(currentLevelNum == 2)
@@ -129,9 +147,17 @@ void Scene::init(const std::string &sceneName)
 		weight->init(weightWorld, texProgram, map);
 		weights.push_back(weight);
 	}
+    const std::vector<glm::ivec2> &bombTiles = map->getBombPositions();
+	for(int i=0; i<int(bombTiles.size()); ++i)
+	{
+		Bomb *bomb = new Bomb();
+		bomb->init(bombTiles[i], texProgram);
+		bombs.push_back(bomb);
+	}
   weightPushLatch.assign(weights.size(), false);
   playerDeathActive = false;
 	enemyExplosions.clear();
+	spaceWasPressed = false;
 
    explosionTexture.loadFromFile("images/Explosions.png", TEXTURE_PIXEL_FORMAT_RGBA);
 	explosionTexture.setWrapS(GL_CLAMP_TO_EDGE);
@@ -159,6 +185,27 @@ void Scene::init(const std::string &sceneName)
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 	explosionPosLocation = texProgram.bindVertexAttribute("position", 2, 4 * sizeof(float), 0);
 	explosionTexCoordLocation = texProgram.bindVertexAttribute("texCoord", 2, 4 * sizeof(float), (void *)(2 * sizeof(float)));
+
+  bombHudTexture.loadFromFile("images/bomba.png", TEXTURE_PIXEL_FORMAT_RGBA);
+	bombHudTexture.setWrapS(GL_CLAMP_TO_EDGE);
+	bombHudTexture.setWrapT(GL_CLAMP_TO_EDGE);
+	bombHudTexture.setMinFilter(GL_NEAREST);
+	bombHudTexture.setMagFilter(GL_NEAREST);
+
+	float bombHudVertices[16] = {
+		0.f, 0.f, 0.f, 0.f,
+		float(HUD_BOMB_ICON_SIZE_PX), 0.f, 1.f, 0.f,
+		float(HUD_BOMB_ICON_SIZE_PX), float(HUD_BOMB_ICON_SIZE_PX), 1.f, 1.f,
+		0.f, float(HUD_BOMB_ICON_SIZE_PX), 0.f, 1.f
+	};
+
+	glGenVertexArrays(1, &bombHudVao);
+	glBindVertexArray(bombHudVao);
+	glGenBuffers(1, &bombHudVbo);
+	glBindBuffer(GL_ARRAY_BUFFER, bombHudVbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(bombHudVertices), bombHudVertices, GL_STATIC_DRAW);
+	bombHudPosLocation = texProgram.bindVertexAttribute("position", 2, 4 * sizeof(float), 0);
+	bombHudTexCoordLocation = texProgram.bindVertexAttribute("texCoord", 2, 4 * sizeof(float), (void *)(2 * sizeof(float)));
 	player = new Player();
 	player->init(glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
  player->setLives(remainingLives);
@@ -280,6 +327,8 @@ void Scene::update(int deltaTime)
 	bool leftPressed = Game::instance().getKey(GLFW_KEY_LEFT);
 	bool rightPressed = Game::instance().getKey(GLFW_KEY_RIGHT);
     bool pushInputPressed = leftPressed || rightPressed;
+    bool spacePressed = Game::instance().getKey(GLFW_KEY_SPACE);
+	bool dropPressed = spacePressed && !spaceWasPressed;
 	for(int i=0; i<int(weights.size()); ++i)
 	{
       if(i >= int(weightPushLatch.size()))
@@ -307,13 +356,46 @@ void Scene::update(int deltaTime)
 		else
 			weightPushLatch[i] = true;
 	}
+	for(int i=0; i<int(bombs.size()); ++i)
+		bombs[i]->update(deltaTime);
 
 	glm::vec2 playerPos = player->getPosition();
+	glm::ivec2 playerSize = player->getSize();
+
+    if(dropPressed)
+	{
+      int bombToDrop = -1;
+		for(int i=0; i<int(bombs.size()); ++i)
+		{
+			if(bombs[i]->isCollected())
+			{
+				bombToDrop = i;
+				break;
+			}
+		}
+		if(bombToDrop >= 0)
+		{
+			glm::ivec2 bombSize = bombs[bombToDrop]->getSize();
+			glm::ivec2 dropPos(
+				int(playerPos.x + (playerSize.x - bombSize.x) * 0.5f),
+				int(playerPos.y));
+			bombs[bombToDrop]->dropAt(dropPos);
+		}
+	}
+
+	for(int i=0; i<int(bombs.size()); ++i)
+	{
+		if(bombs[i]->canBeCollected() && collidesWith(playerPos, playerSize, bombs[i]->getPosition(), bombs[i]->getSize()))
+			bombs[i]->collect();
+	}
+	spaceWasPressed = spacePressed;
+
 	glm::ivec2 playerTilePos((int(playerPos.x) + 8) / map->getTileSize(),(int(playerPos.y) + 15) / map->getTileSize());
 	for (int i = 0; i < Enemies.size(); ++i)	Enemies[i]->update(deltaTime, playerPos);
- for (int i = 0; i < int(Enemies.size()); )
+	for (int i = 0; i < int(Enemies.size()); )
 	{
 		bool killedByWeight = false;
+		int bombHitIndex = -1;
 		glm::vec2 enemyPos = Enemies[i]->getPosition();
 		glm::ivec2 enemySize = Enemies[i]->getCollisionSize();
 		for(int j = 0; j < int(weights.size()) && !killedByWeight; ++j)
@@ -324,6 +406,18 @@ void Scene::update(int deltaTime)
 			if(collidesWith(enemyPos, enemySize, weights[j]->getPosition(), weights[j]->getSize()))
 				killedByWeight = true;
 		}
+      for(int j=0; j<int(bombs.size()); ++j)
+		{
+            if(!bombs[j]->isArmed() || bombs[j]->isCollected())
+				continue;
+
+         if(collidesWith(enemyPos, enemySize, bombs[j]->getPosition(), bombs[j]->getSize()))
+			{
+				killedByWeight = true;
+               bombHitIndex = j;
+				break;
+			}
+		}
 
 		if(killedByWeight)
 		{
@@ -331,6 +425,11 @@ void Scene::update(int deltaTime)
 			explosion.pos = enemyPos;
 			explosion.timerMs = EXPLOSION_DURATION_MS;
 			enemyExplosions.push_back(explosion);
+          if(bombHitIndex >= 0)
+			{
+				delete bombs[bombHitIndex];
+				bombs.erase(bombs.begin() + bombHitIndex);
+			}
 			delete Enemies[i];
 			Enemies.erase(Enemies.begin() + i);
 		}
@@ -490,7 +589,33 @@ void Scene::render()
 		keys[i]->render();
    for(int i=0; i<int(weights.size()); ++i)
 		weights[i]->render();
+    for(int i=0; i<int(bombs.size()); ++i)
+		bombs[i]->render();
    player->render();
+    if(bombHudVao != 0)
+	{
+		int carriedBombs = 0;
+		for(int i = 0; i < int(bombs.size()); ++i)
+		{
+			if(bombs[i]->isCollected())
+				++carriedBombs;
+		}
+
+     const float startX = 0.f;
+		for(int i = 0; i < carriedBombs; ++i)
+		{
+         glm::mat4 bombHudModelview = glm::translate(glm::mat4(1.0f), glm::vec3(startX + float(i * HUD_ICON_SPACING_PX), float(HUD_BOMB_ROW_Y_PX), 0.f));
+			texProgram.setUniformMatrix4f("modelview", bombHudModelview);
+			texProgram.setUniform2f("texCoordDispl", 0.f, 0.f);
+			glEnable(GL_TEXTURE_2D);
+			bombHudTexture.use();
+			glBindVertexArray(bombHudVao);
+			glEnableVertexAttribArray(bombHudPosLocation);
+			glEnableVertexAttribArray(bombHudTexCoordLocation);
+			glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+			glDisable(GL_TEXTURE_2D);
+		}
+	}
    for (int i = 0; i < int(Enemies.size()); ++i)
 		Enemies[i]->render();
    if(explosionVao != 0)
@@ -536,6 +661,13 @@ void Scene::freeEnemies()
 	for(int i=0; i<int(Enemies.size()); ++i)
 		delete Enemies[i];
 	Enemies.clear();
+}
+
+void Scene::freeBombs()
+{
+	for(int i=0; i<int(bombs.size()); ++i)
+		delete bombs[i];
+	bombs.clear();
 }
 
 void Scene::initShaders()
@@ -602,6 +734,7 @@ void Scene::loadLevel(int levelNum)
 	for(int i=0; i<int(weights.size()); ++i)
 		delete weights[i];
 	weights.clear();
+  freeBombs();
 	playerDeathActive = false;
 	enemyExplosions.clear();
 
@@ -637,6 +770,7 @@ void Scene::loadLevelFile(const std::string &levelPath)
 		delete player;
 		player = NULL;
 	}
+  freeBombs();
 	playerDeathActive = false;
 	enemyExplosions.clear();
 

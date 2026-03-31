@@ -765,4 +765,15 @@ bool Player::isDeathAnimationFinished() const
 	return deathFinished;
 }
 
+void Player::setLives(int lives)
+{
+	if(lives < 0) lives = 0;
+	health = lives;
+}
+
+int Player::getLives() const
+{
+	return health;
+}
+
 

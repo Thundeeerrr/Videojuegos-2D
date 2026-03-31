@@ -37,6 +37,7 @@ public:
 	void loadLevel(int levelNum);
  void loadLevelFile(const std::string &levelPath);
 	bool isGodMode() const;
+	void resetForNewGame();
 
 private:
 	void initShaders();
@@ -73,6 +74,8 @@ private:
 	GLint explosionPosLocation, explosionTexCoordLocation;
 	bool playerDeathActive;
   std::vector<EnemyExplosion> enemyExplosions;
+  int remainingLives;
+	static const int MAX_LIVES = 3;
 };
 
 

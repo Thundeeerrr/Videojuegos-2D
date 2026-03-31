@@ -158,7 +158,10 @@ bool Game::getKey(int key) const
 void Game::changeState(GameState newState)
 {
 	if(newState == STATE_PLAYING)
-       scene.loadLevel(1);
+  {
+		scene.resetForNewGame();
+		scene.loadLevel(1);
+	}
 	if(newState == STATE_INTRO)
 		intro.init();
 	if(newState == STATE_CREDITS)

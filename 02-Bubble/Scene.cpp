@@ -63,6 +63,7 @@ Scene::Scene()
 	explosionTexCoordLocation = -1;
 	playerDeathActive = false;
    enemyExplosions.clear();
+   remainingLives = MAX_LIVES;
 }
 
 Scene::~Scene()
@@ -160,6 +161,7 @@ void Scene::init(const std::string &sceneName)
 	explosionTexCoordLocation = texProgram.bindVertexAttribute("texCoord", 2, 4 * sizeof(float), (void *)(2 * sizeof(float)));
 	player = new Player();
 	player->init(glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
+ player->setLives(remainingLives);
 	for (int i = 0; i < 1; ++i)
 	{
 		cout << "Initializing enemy " << i << endl;
@@ -261,7 +263,16 @@ void Scene::update(int deltaTime)
 	{
         player->update(deltaTime);
 		if(player->isDeathAnimationFinished())
-			loadLevel(currentLevelNum);
+     {
+			--remainingLives;
+			if(remainingLives <= 0)
+			{
+				remainingLives = MAX_LIVES;
+				Game::instance().changeState(STATE_MENU);
+			}
+			else
+				loadLevel(currentLevelNum);
+		}
 		return;
 	}
 
@@ -564,6 +575,16 @@ void Scene::toggleGodMode()
 
 void Scene::giveAllKeys()
 {
+}
+
+void Scene::resetForNewGame()
+{
+	remainingLives = MAX_LIVES;
+	openedDoorsByLevel.clear();
+	hasReturnPoint = false;
+	hasSpawnOverride = false;
+	hasDoorTarget = false;
+	spawnAtDoorInLoadedLevel = false;
 }
 
 void Scene::loadLevel(int levelNum)

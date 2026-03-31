@@ -45,6 +45,8 @@ public:
 	void resetDoorState();
 	void startDeathAnimation();
 	bool isDeathAnimationFinished() const;
+	void setLives(int lives);
+	int getLives() const;
 	
 private:
 	bool bJumping;

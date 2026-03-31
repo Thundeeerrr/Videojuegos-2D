@@ -32,9 +32,16 @@ namespace
    const int PLANT_CLIMB_COL = 0;
    const int PLANT_CLIMB_COL_B = 1;
     const float PLAYER_FRAME_WIDTH_PX = 14.f;
+  const float PLAYER_COLLISION_WIDTH_PX = 16.f;
 	const float PLAYER_COLLISION_HEIGHT_PX = 16.f;
 	const float PLAYER_SPRITE_HEIGHT_PX = 24.f;
 	const float PLAYER_VISUAL_OFFSET_Y_PX = PLAYER_COLLISION_HEIGHT_PX - PLAYER_SPRITE_HEIGHT_PX;
+   const float SHIELD_FRAME_WIDTH_PX = 24.f;
+	const float SHIELD_FRAME_HEIGHT_PX = 25.f;
+	const float SHIELD_VISUAL_OFFSET_X_PX = (PLAYER_COLLISION_WIDTH_PX - SHIELD_FRAME_WIDTH_PX) * 0.5f;
+	const float SHIELD_VISUAL_OFFSET_Y_PX = (PLAYER_COLLISION_HEIGHT_PX - SHIELD_FRAME_HEIGHT_PX) * 0.5f;
+	const int SHIELD_ANIM_FRAMES = 3;
+	const int SHIELD_ANIM_FPS = 8;
   const int DOOR_TELEPORT_EXIT_OFFSET_PX = int(PLAYER_COLLISION_HEIGHT_PX / 2.f);
    const int TUBE_UP_REACH_OFFSET_PX = 16;
     const int WARP_ANIM_FRAMES = 4;
@@ -54,6 +61,8 @@ namespace
 Player::Player()
 {
 	sprite = NULL;
+ healthSprite = NULL;
+	shieldSprite = NULL;
 	map = NULL;
 }
 
@@ -65,6 +74,8 @@ Player::~Player()
 		delete sprite;
 	if (healthSprite != NULL)
 		delete healthSprite;
+   if (shieldSprite != NULL)
+		delete shieldSprite;
 }
 
 void Player::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
@@ -94,15 +105,31 @@ void Player::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
      deathActive = false;
 	deathFinished = false;
 	deathTimerMs = 0;
+ shieldActive = false;
     jumpPlatformPosY = 0.f;
 	//spritesheet.loadFromFile("images/bub.png", TEXTURE_PIXEL_FORMAT_RGBA);
 	spritesheet.loadFromFile("images/BugsBunny-Sprites.png", TEXTURE_PIXEL_FORMAT_RGBA);
 	healthTexture.loadFromFile("images/heart.png", TEXTURE_PIXEL_FORMAT_RGBA);
+   shieldTexture.loadFromFile("images/igShields.png", TEXTURE_PIXEL_FORMAT_RGBA);
+	shieldTexture.setWrapS(GL_CLAMP_TO_EDGE);
+	shieldTexture.setWrapT(GL_CLAMP_TO_EDGE);
+	shieldTexture.setMinFilter(GL_NEAREST);
+	shieldTexture.setMagFilter(GL_NEAREST);
 	//sprite = Sprite::createSprite(glm::ivec2(16, 16), glm::vec2(0.25, 0.25), &spritesheet, &shaderProgram);
 	sprite = Sprite::createSprite(glm::ivec2(16, 24),
 		glm::vec2(1.f / 8.f, 1.f / 12.f),
 		&spritesheet, &shaderProgram);
 	healthSprite = Sprite::createSprite(glm::ivec2(16, 16), glm::vec2(1.0, 1.0), &healthTexture, &shaderProgram);
+   shieldSprite = Sprite::createSprite(
+		glm::ivec2(int(SHIELD_FRAME_WIDTH_PX), int(SHIELD_FRAME_HEIGHT_PX)),
+		glm::vec2(SHIELD_FRAME_WIDTH_PX / float(shieldTexture.width()), 1.f),
+		&shieldTexture,
+		&shaderProgram);
+	shieldSprite->setNumberAnimations(1);
+	shieldSprite->setAnimationSpeed(0, SHIELD_ANIM_FPS);
+	for(int col = 0; col < SHIELD_ANIM_FRAMES; ++col)
+		shieldSprite->addKeyframe(0, glm::vec2((SHIELD_FRAME_WIDTH_PX * col) / float(shieldTexture.width()), 0.f));
+	shieldSprite->changeAnimation(0);
 	#define UV(col, row) glm::vec2((col) / 8.f, (row) / 12.f)
 
     sprite->setNumberAnimations(14);
@@ -194,6 +221,9 @@ void Player::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 
 void Player::update(int deltaTime)
 {
+  if(shieldSprite != NULL)
+		shieldSprite->update(deltaTime);
+
    if(deathActive)
 	{
 		sprite->setAnimationPaused(false);
@@ -207,7 +237,8 @@ void Player::update(int deltaTime)
 			deathActive = false;
 			deathFinished = true;
 		}
-		sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y) + PLAYER_VISUAL_OFFSET_Y_PX));
+       sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y) + PLAYER_VISUAL_OFFSET_Y_PX));
+		shieldSprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x) + SHIELD_VISUAL_OFFSET_X_PX, float(tileMapDispl.y + posPlayer.y) + SHIELD_VISUAL_OFFSET_Y_PX));
 		return;
 	}
 
@@ -224,7 +255,8 @@ void Player::update(int deltaTime)
 			warpState = WarpState::APPEARING;
 			warpTimer = WARP_ANIM_DURATION_MS;
 		}
-		sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y) + PLAYER_VISUAL_OFFSET_Y_PX));
+       sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y) + PLAYER_VISUAL_OFFSET_Y_PX));
+		shieldSprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x) + SHIELD_VISUAL_OFFSET_X_PX, float(tileMapDispl.y + posPlayer.y) + SHIELD_VISUAL_OFFSET_Y_PX));
 		return;
 	}
 	if(warpState == WarpState::APPEARING)
@@ -618,7 +650,8 @@ void Player::update(int deltaTime)
        sprite->changeAnimation(DOOR_ENTER);
 	}
 	
-   sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y) + PLAYER_VISUAL_OFFSET_Y_PX));
+    sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y) + PLAYER_VISUAL_OFFSET_Y_PX));
+	shieldSprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x) + SHIELD_VISUAL_OFFSET_X_PX, float(tileMapDispl.y + posPlayer.y) + SHIELD_VISUAL_OFFSET_Y_PX));
 }
 
 void Player::render()
@@ -637,6 +670,7 @@ void Player::render()
 
   int currentAnim = sprite->animation();
     bool usesExplicitFacing = currentAnim == JUMP_LEFT || currentAnim == JUMP_RIGHT || currentAnim == DEATH_LEFT || currentAnim == DEATH_RIGHT;
+ shieldSprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x) + SHIELD_VISUAL_OFFSET_X_PX, float(tileMapDispl.y + posPlayer.y) + SHIELD_VISUAL_OFFSET_Y_PX));
 	if(!facingRight && !usesExplicitFacing)
 	{
 		glm::mat4 local = glm::translate(glm::mat4(1.0f), glm::vec3(PLAYER_FRAME_WIDTH_PX, 0.f, 0.f));
@@ -647,6 +681,8 @@ void Player::render()
 		sprite->setLocalTransform(glm::mat4(1.0f));
 
 	sprite->render();
+ if(shieldActive)
+		shieldSprite->render();
 	glm::vec2 healthPos = glm::vec2(0.0f, 0.0f);
 	for (int i = 0; i < health; i++)
 	{
@@ -665,7 +701,8 @@ void Player::setPosition(const glm::vec2 &pos)
 {
 	posPlayer = pos;
     jumpPlatformPosY = float(posPlayer.y);
-   sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y) + PLAYER_VISUAL_OFFSET_Y_PX));
+    sprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x), float(tileMapDispl.y + posPlayer.y) + PLAYER_VISUAL_OFFSET_Y_PX));
+	shieldSprite->setPosition(glm::vec2(float(tileMapDispl.x + posPlayer.x) + SHIELD_VISUAL_OFFSET_X_PX, float(tileMapDispl.y + posPlayer.y) + SHIELD_VISUAL_OFFSET_Y_PX));
 }
 
 glm::vec2 Player::getPosition() const
@@ -774,6 +811,21 @@ void Player::setLives(int lives)
 int Player::getLives() const
 {
 	return health;
+}
+
+void Player::activateShield()
+{
+	shieldActive = true;
+}
+
+void Player::consumeShield()
+{
+	shieldActive = false;
+}
+
+bool Player::hasShield() const
+{
+	return shieldActive;
 }
 
 

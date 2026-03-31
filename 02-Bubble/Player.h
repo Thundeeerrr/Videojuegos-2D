@@ -47,14 +47,17 @@ public:
 	bool isDeathAnimationFinished() const;
 	void setLives(int lives);
 	int getLives() const;
+	void activateShield();
+	void consumeShield();
+	bool hasShield() const;
 	
 private:
 	bool bJumping;
 	bool facingRight;
 	glm::ivec2 tileMapDispl, posPlayer;
 	int jumpAngle, startY;
-	Texture spritesheet, healthTexture;
-	Sprite *sprite, *healthSprite;
+ Texture spritesheet, healthTexture, shieldTexture;
+	Sprite *sprite, *healthSprite, *shieldSprite;
 	TileMap *map;
 	int health;
   int keyCount;
@@ -84,6 +87,7 @@ private:
    bool deathActive;
 	bool deathFinished;
 	int deathTimerMs;
+   bool shieldActive;
  static const int TUBE_ENTER_TIME = 1000;
 	static const int TUBE_EXIT_TIME = 400;
     static constexpr float JUMP_PLATFORM_GRAVITY = 0.1f;

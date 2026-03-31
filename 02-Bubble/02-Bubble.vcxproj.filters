@@ -60,13 +60,28 @@
     <ClInclude Include="Key.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-	<ClInclude Include="DonaldEnemy.h">
+    <ClInclude Include="DonaldEnemy.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-	<ClInclude Include="PiolinEnemy.h">
+    <ClInclude Include="PiolinEnemy.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-	<ClInclude Include="FrancoEnemy.h">
+    <ClInclude Include="FrancoEnemy.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="Bomb.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="Enemy.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="Pushable.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="ShieldItem.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
   </ItemGroup>
@@ -116,13 +131,25 @@
     <ClCompile Include="Key.cpp">
       <Filter>Archivos de código fuente</Filter>
     </ClCompile>
-	<ClCompile Include="DonaldEnemy.cpp">
+    <ClCompile Include="DonaldEnemy.cpp">
       <Filter>Archivos de código fuente</Filter>
     </ClCompile>
-	<ClCompile Include="PiolinEnemy.cpp">
+    <ClCompile Include="PiolinEnemy.cpp">
       <Filter>Archivos de código fuente</Filter>
     </ClCompile>
-	<ClCompile Include="FrancoEnemy.cpp">
+    <ClCompile Include="FrancoEnemy.cpp">
+      <Filter>Archivos de código fuente</Filter>
+    </ClCompile>
+    <ClCompile Include="Bomb.cpp">
+      <Filter>Archivos de código fuente</Filter>
+    </ClCompile>
+    <ClCompile Include="Enemy.cpp">
+      <Filter>Archivos de código fuente</Filter>
+    </ClCompile>
+    <ClCompile Include="Pushable.cpp">
+      <Filter>Archivos de código fuente</Filter>
+    </ClCompile>
+    <ClCompile Include="ShieldItem.cpp">
       <Filter>Archivos de código fuente</Filter>
     </ClCompile>
   </ItemGroup>
@@ -134,5 +161,6 @@
     <Text Include="levels\level03.txt" />
     <Text Include="levels\level04.txt" />
     <Text Include="levels\level05.txt" />
+    <Text Include="levels\KeyRoom.txt" />
   </ItemGroup>
 </Project>

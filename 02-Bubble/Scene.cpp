@@ -855,8 +855,19 @@ void Scene::resetForNewGame()
 	spawnAtDoorInLoadedLevel = false;
 }
 
+void Scene::restartCurrentLevel()
+{
+	const int levelToReload = (currentLevelNum < 0) ? 1 : currentLevelNum;
+	resetForNewGame();
+	clearSuspendedLevel();
+	loadLevel(levelToReload);
+}
+
 void Scene::loadLevel(int levelNum)
 {
+    if(levelNum != currentLevelNum && levelNum >= 0)
+		remainingLives = MAX_LIVES;
+
 	// Normal transitions should respawn, so discard any suspended snapshot.
 	if(levelNum != 0)
 		clearSuspendedLevel();

@@ -39,6 +39,7 @@ public:
  void loadLevelFile(const std::string &levelPath);
 	bool isGodMode() const;
 	void resetForNewGame();
+	void restartCurrentLevel();
 
 private:
 	void initShaders();

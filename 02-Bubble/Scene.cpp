@@ -33,7 +33,34 @@ namespace
    const int LEVEL_COMPLETE_STARS_COUNT = 3;
 	const int LEVEL_COMPLETE_STARS_SIZE_PX = 32;
 	const int LEVEL_COMPLETE_STARS_ANIM_FPS = 6;
-	const int LEVEL_COMPLETE_STARS_Y_BOTTOM_MARGIN_PX = 36;
+ const int LEVEL_COMPLETE_STARS_DEFAULT_BOTTOM_MARGIN_PX = 36;
+	const int LEVEL_COMPLETE_STARS_DEFAULT_SPACING_PX = 72;
+
+	struct LevelCompleteStarsLayout
+	{
+		int centerXOffsetPx;
+		int bottomMarginPx;
+		int spacingPx;
+	};
+
+	LevelCompleteStarsLayout getLevelCompleteStarsLayout(int levelNum)
+	{
+		LevelCompleteStarsLayout layout;
+		layout.centerXOffsetPx = 0;
+		layout.bottomMarginPx = LEVEL_COMPLETE_STARS_DEFAULT_BOTTOM_MARGIN_PX;
+		layout.spacingPx = LEVEL_COMPLETE_STARS_DEFAULT_SPACING_PX;
+
+		if(levelNum == 4)
+		{
+			layout.bottomMarginPx = 52;
+		}
+		else if(levelNum == 5)
+		{
+			layout.bottomMarginPx = 60;
+		}
+
+		return layout;
+	}
   const int GAME_OVER_DURATION_MS = 5000;
 	const int GAME_OVER_APPEAR_TIME_MS = 700;
 	const float GAME_OVER_DARKEN_FACTOR = 0.45f;
@@ -324,9 +351,9 @@ void Scene::init(const std::string &sceneName)
 		delete levelCompletedStars[i];
 	levelCompletedStars.clear();
 
-   const float starsMapPixelW = map->getMapSize().x * map->getTileSize();
-	const float starsMapPixelH = map->getMapSize().y * map->getTileSize();
-	const float starsY = starsMapPixelH - float(LEVEL_COMPLETE_STARS_Y_BOTTOM_MARGIN_PX + LEVEL_COMPLETE_STARS_SIZE_PX);
+    const LevelCompleteStarsLayout starsLayout = getLevelCompleteStarsLayout(currentLevelNum);
+	const float starsCenterX = (mapPixelW * 0.5f) + float(starsLayout.centerXOffsetPx);
+	const float starsY = mapPixelH - float(starsLayout.bottomMarginPx + LEVEL_COMPLETE_STARS_SIZE_PX);
 	for(int i = 0; i < LEVEL_COMPLETE_STARS_COUNT; ++i)
 	{
 		Sprite *star = Sprite::createSprite(
@@ -341,8 +368,8 @@ void Scene::init(const std::string &sceneName)
 		star->addKeyframe(0, glm::vec2(2.f / 3.f, 0.f));
 		star->changeAnimation(0);
 
-		const float xNormalized = float(i + 1) / float(LEVEL_COMPLETE_STARS_COUNT + 1);
-      const float starX = (starsMapPixelW * xNormalized) - (LEVEL_COMPLETE_STARS_SIZE_PX * 0.5f);
+     const int centeredIndex = i - (LEVEL_COMPLETE_STARS_COUNT / 2);
+		const float starX = starsCenterX + float(centeredIndex * starsLayout.spacingPx) - (LEVEL_COMPLETE_STARS_SIZE_PX * 0.5f);
 		star->setPosition(glm::vec2(starX, starsY));
 		levelCompletedStars.push_back(star);
 	}

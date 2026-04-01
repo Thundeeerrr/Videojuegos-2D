@@ -1067,7 +1067,7 @@ void Scene::update(int deltaTime)
 		{
             if(doorTargetIsLockedExit)
 			{
-				levelCompletedActive = true;
+				levelCompletedActive = (totalKeys == neededKeys);
 				levelCompletedTimerMs = LEVEL_COMPLETED_DURATION_MS;
 				return;
 			}

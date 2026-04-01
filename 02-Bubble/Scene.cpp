@@ -773,6 +773,7 @@ void Scene::update(int deltaTime)
 				return;
 			}
 
+            spawnAtDoorInLoadedLevel = true;
 			suspendCurrentLevelForKeyRoom();
 			loadLevel(0);
 			return;
@@ -858,51 +859,38 @@ void Scene::render()
 		}
 	}
 
+  auto renderFullScreenOverlay = [&](Texture &texture, float alpha)
+	{
+		texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, alpha);
+		texProgram.setUniformMatrix4f("modelview", glm::mat4(1.0f));
+		texProgram.setUniform2f("texCoordDispl", 0.f, 0.f);
+		glEnable(GL_TEXTURE_2D);
+		texture.use();
+		glBindVertexArray(gameOverVao);
+		glEnableVertexAttribArray(gameOverPosLocation);
+		glEnableVertexAttribArray(gameOverTexCoordLocation);
+		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+		glDisable(GL_TEXTURE_2D);
+	};
+
 	if(gameOverActive && gameOverVao != 0)
 	{
+
 		int elapsedMs = GAME_OVER_DURATION_MS - gameOverTimerMs;
 		if(elapsedMs < 0) elapsedMs = 0;
 		float appearAlpha = float(elapsedMs) / float(GAME_OVER_APPEAR_TIME_MS);
 		if(appearAlpha > 1.f) appearAlpha = 1.f;
-
-		texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, appearAlpha);
-		texProgram.setUniformMatrix4f("modelview", glm::mat4(1.0f));
-		texProgram.setUniform2f("texCoordDispl", 0.f, 0.f);
-		glEnable(GL_TEXTURE_2D);
-		gameOverTexture.use();
-		glBindVertexArray(gameOverVao);
-		glEnableVertexAttribArray(gameOverPosLocation);
-		glEnableVertexAttribArray(gameOverTexCoordLocation);
-		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-		glDisable(GL_TEXTURE_2D);
+		renderFullScreenOverlay(gameOverTexture, appearAlpha);
 	}
 
 	if(levelCompletedActive && gameOverVao != 0)
 	{
-		texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
-		texProgram.setUniformMatrix4f("modelview", glm::mat4(1.0f));
-		texProgram.setUniform2f("texCoordDispl", 0.f, 0.f);
-		glEnable(GL_TEXTURE_2D);
-		levelCompletedTexture.use();
-		glBindVertexArray(gameOverVao);
-		glEnableVertexAttribArray(gameOverPosLocation);
-		glEnableVertexAttribArray(gameOverTexCoordLocation);
-		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-		glDisable(GL_TEXTURE_2D);
+		renderFullScreenOverlay(levelCompletedTexture, 1.0f);
 	}
 
 	if(pauseActive && gameOverVao != 0)
 	{
-		texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
-		texProgram.setUniformMatrix4f("modelview", glm::mat4(1.0f));
-		texProgram.setUniform2f("texCoordDispl", 0.f, 0.f);
-		glEnable(GL_TEXTURE_2D);
-		pauseMenuTexture.use();
-		glBindVertexArray(gameOverVao);
-		glEnableVertexAttribArray(gameOverPosLocation);
-		glEnableVertexAttribArray(gameOverTexCoordLocation);
-		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-		glDisable(GL_TEXTURE_2D);
+		renderFullScreenOverlay(pauseMenuTexture, 1.0f);
 	}
 }
 
@@ -987,6 +975,24 @@ void Scene::toggleGodMode()
 
 void Scene::giveAllKeys()
 {
+   if(map == NULL)
+		return;
+
+	const bool hadKeys = !keys.empty();
+	for(int i = 0; i < int(keys.size()); ++i)
+	{
+		if(player != NULL)
+			player->addKey();
+		map->removeKeyAtTile(keys[i]->getTilePos());
+		delete keys[i];
+	}
+	keys.clear();
+
+	if(hadKeys && currentLevelNum == 0 && hasReturnPoint)
+	{
+		if(!containsDoorTile(collectedRoomKeys[returnLevelNum], returnTilePos))
+			collectedRoomKeys[returnLevelNum].push_back(returnTilePos);
+	}
 }
 
 void Scene::resetForNewGame()
@@ -1054,7 +1060,10 @@ void Scene::loadLevel(int levelNum)
 	if(levelNum == 0)
 	{
      currentLevelNum = 0;
-	 if (hasReturnPoint && containsDoorTile(collectedRoomKeys[returnLevelNum], returnTilePos))	init("levels/KeyRoom_collected.txt");
+	 if (hasReturnPoint && containsDoorTile(collectedRoomKeys[returnLevelNum], returnTilePos))	
+	 {init("levels/KeyRoom_collected.txt");
+		 cout << "Loading key room with collected keys: " << collectedRoomKeys[returnLevelNum].size() << endl;
+	 }
 	 else init("levels/KeyRoom.txt");
 		return;
 	}

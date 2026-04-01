@@ -72,6 +72,8 @@ namespace
     const int HUD_BOMB_ROW_Y_PX = 16;
     const int LEVEL02_PIOLIN_MIN_COL = 4;
 	const int LEVEL02_PIOLIN_MAX_COL = 14;
+	const int LEVEL05_FRANCO_MIN_COL = 2;
+	const int LEVEL05_FRANCO_MAX_COL = 13;
 
 	bool containsDoorTile(const std::vector<glm::ivec2> &tiles, const glm::ivec2 &tile)
 	{
@@ -382,9 +384,11 @@ void Scene::init(const std::string &sceneName)
 	for (int i = 0; i < 1; ++i)
 	{
 		cout << "Initializing enemy " << i << endl;
-		if (currentLevelNum == 0)	break;
-     if(currentLevelNum == 2 || currentLevelNum >= 4)
+      if (currentLevelNum == 0)	break;
+		if(currentLevelNum == 2 || currentLevelNum == 4)
 			Enemies.push_back(new PiolinEnemy());
+		else if(currentLevelNum >= 5)
+			Enemies.push_back(new FrancoEnemy());
 		else
 			Enemies.push_back(new DonaldEnemy());
 		Enemies[i]->init(glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
@@ -392,6 +396,11 @@ void Scene::init(const std::string &sceneName)
        if(currentLevelNum == 2)
 		{
 			const glm::ivec2 enemySpawnTile(3, 5);
+			Enemies[i]->setPosition(glm::vec2(enemySpawnTile.x * map->getTileSize(), enemySpawnTile.y * map->getTileSize()));
+		}
+       else if(currentLevelNum == 5)
+		{
+			const glm::ivec2 enemySpawnTile(2, 4);
 			Enemies[i]->setPosition(glm::vec2(enemySpawnTile.x * map->getTileSize(), enemySpawnTile.y * map->getTileSize()));
 		}
 	}
@@ -659,9 +668,10 @@ void Scene::update(int deltaTime)
     auto getEnemyInteractionPos = [&](Enemy *enemy) -> glm::vec2
 	{
 		glm::vec2 pos = enemy->getPosition();
-		if(currentLevelNum == 2 && enemy->getType() == Enemy::Type::PIOLIN)
+     if((currentLevelNum == 2 && enemy->getType() == Enemy::Type::PIOLIN) ||
+		   (currentLevelNum == 5 && enemy->getType() == Enemy::Type::FRANCO))
 		{
-			// Piolin patrol uses a visual-alignment Y lock in level 2.
+         // Constrained horizontal patrol uses a visual-alignment Y lock.
 			// Shift interaction box one tile down so player/items contact matches
 			// on-screen sprite contact without moving enemy rendering.
 			pos.y += float(map->getTileSize());
@@ -678,6 +688,14 @@ void Scene::update(int deltaTime)
 			const float maxX = float(LEVEL02_PIOLIN_MAX_COL * tileSize);
             PiolinEnemy *piolin = static_cast<PiolinEnemy*>(Enemies[i]);
 			piolin->enforceHorizontalPatrolRange(minX, maxX);
+		}
+       else if(currentLevelNum == 5 && Enemies[i]->getType() == Enemy::Type::FRANCO)
+		{
+			const int tileSize = map->getTileSize();
+			const float minX = float(LEVEL05_FRANCO_MIN_COL * tileSize);
+			const float maxX = float(LEVEL05_FRANCO_MAX_COL * tileSize);
+			FrancoEnemy *franco = static_cast<FrancoEnemy*>(Enemies[i]);
+			franco->enforceHorizontalPatrolRange(minX, maxX);
 		}
 	}
 	for (int i = 0; i < int(Enemies.size()); )

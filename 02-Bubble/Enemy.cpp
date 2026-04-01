@@ -63,9 +63,9 @@ void Enemy::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 		&spritesheet,
 		&shaderProgram);
 
-	sprite->setNumberAnimations(2);
+ sprite->setNumberAnimations(getAnimationCount());
 	configureAnimations(texW, texH);
-	sprite->changeAnimation(STAND);
+ sprite->changeAnimation(getStandAnimationId());
 
 	choosePatrolDirection();
 	setPosition(glm::vec2(0.f, 0.f));
@@ -93,7 +93,7 @@ void Enemy::render()
 	if(sprite == NULL)
 		return;
 
-	if(!facingRight)
+    if(!facingRight && shouldMirrorWhenFacingLeft())
 	{
 		glm::mat4 local = glm::translate(glm::mat4(1.0f), glm::vec3(float(frameWidthPx), 0.f, 0.f));
 		local = glm::scale(local, glm::vec3(-1.f, 1.f, 1.f));
@@ -254,16 +254,27 @@ void Enemy::update(int deltaTime, const glm::vec2 &bugsWorldPos)
 
 	stepAI(deltaTime, bugsTile);
 
-	const bool moved = (posEnemy != prevPos);
-	if(moved)
+    int forcedAnim = -1;
+	if(getForcedAnimationId(forcedAnim))
 	{
-		if(sprite->animation() != WALK)
-			sprite->changeAnimation(WALK);
+		if(sprite->animation() != forcedAnim)
+			sprite->changeAnimation(forcedAnim);
 	}
 	else
 	{
-		if(sprite->animation() != STAND)
-			sprite->changeAnimation(STAND);
+		const bool moved = (posEnemy != prevPos);
+		const int standAnim = getStandAnimationId();
+		const int walkAnim = getWalkAnimationId();
+		if(moved)
+		{
+			if(sprite->animation() != walkAnim)
+				sprite->changeAnimation(walkAnim);
+		}
+		else
+		{
+			if(sprite->animation() != standAnim)
+				sprite->changeAnimation(standAnim);
+		}
 	}
 
 	const int visualOffsetY = COLLISION_H_PX - frameHeightPx;

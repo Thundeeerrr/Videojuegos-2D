@@ -39,6 +39,11 @@ protected:
 	virtual void stepAI(int deltaTime, const glm::ivec2 &bugsTilePos) = 0;
 	virtual int getVisionRangeTiles() const { return DEFAULT_VISION_RANGE_TILES; }
 	virtual int getSearchDurationMs() const { return DEFAULT_SEARCH_DURATION_MS; }
+	virtual int getAnimationCount() const { return 2; }
+	virtual int getStandAnimationId() const { return STAND; }
+	virtual int getWalkAnimationId() const { return WALK; }
+    virtual bool getForcedAnimationId(int &animId) const { return false; }
+	virtual bool shouldMirrorWhenFacingLeft() const { return true; }
 
 	// Shared helpers for subclasses
 	bool canSeeBugs(const glm::ivec2 &bugsTilePos) const;

@@ -156,6 +156,11 @@ bool Game::getKey(int key) const
 	return keys[key];
 }
 
+GameState Game::getCurrentState() const
+{
+	return currentState;
+}
+
 void Game::changeState(GameState newState)
 {
    if(newState == STATE_PLAYING && currentState != STATE_INSTRUCTIONS)

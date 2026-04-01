@@ -119,6 +119,8 @@ bool TileMap::loadLevel(const string &levelFile)
 	doorTileNoStairsRenderTileId = -1;
     int markerBackgroundTileId = DEFAULT_MARKER_BACKGROUND_TILE_ID;
     int bombMarkerBackgroundTileId = markerBackgroundTileId;
+	rampUpRightTileIds.clear();
+	rampUpLeftTileIds.clear();
 	if(tilesheetFile.find("level4-def") != string::npos)
 	{
 		tubeTopRenderTileId = LEVEL04_TUBE_TOP_RENDER_TILE_ID;
@@ -127,6 +129,7 @@ bool TileMap::loadLevel(const string &levelFile)
        doorTileNoStairsRenderTileId = LEVEL04_DOOR_NO_STAIRS_RENDER_TILE_ID;
 		doorTileStairsRenderTileId = LEVEL04_DOOR_STAIRS_RENDER_TILE_ID;
        markerBackgroundTileId = LEVEL04_MARKER_BACKGROUND_TILE_ID;
+	   
 	}
     else if(tilesheetFile.find("level5-def") != string::npos)
 	{
@@ -135,6 +138,10 @@ bool TileMap::loadLevel(const string &levelFile)
        doorTileNoStairsRenderTileId = LEVEL05_DOOR_NO_STAIRS_RENDER_TILE_ID;
 		doorTileStairsRenderTileId = LEVEL05_DOOR_STAIRS_RENDER_TILE_ID;
        markerBackgroundTileId = LEVEL05_MARKER_BACKGROUND_TILE_ID;
+	   rampUpRightTileIds.insert(29);
+	   rampUpRightTileIds.insert(224);
+	   rampUpLeftTileIds.insert(26);
+	   rampUpLeftTileIds.insert(190);
 	}
    else if(tilesheetFile.find("level1") != string::npos)
 	{
@@ -437,20 +444,26 @@ void TileMap::prepareArrays(const glm::vec2 &minCoords, ShaderProgram &program)
 
 bool TileMap::collisionMoveLeft(const glm::ivec2 &pos, const glm::ivec2 &size) const
 {
-	/*int x, y0, y1;
-	
-	x = pos.x / tileSize;
-	y0 = pos.y / tileSize;
-	y1 = (pos.y + size.y - 1) / tileSize;
-	for(int y=y0; y<=y1; y++)
+	if(pos.x <= 0) return true;
+
+	const int x = pos.x / tileSize;
+
+	// Lower-body probe only: top 40% ignored to avoid false blocking by overhead tiles.
+	const int probeTopOffsetPx = (size.y * 2) / 5;
+	const int y0 = (pos.y + probeTopOffsetPx) / tileSize;
+	const int y1 = (pos.y + size.y - 1) / tileSize;
+
+	for(int y = y0; y <= y1; ++y)
 	{
-		if(map[y*mapSize.x+x] != 0)
+		if(x < 0 || x >= mapSize.x || y < 0 || y >= mapSize.y)
+			continue;
+
+		const int tile = map[y * mapSize.x + x];
+		if(tile == -2) return true;
+		if(collidedTiles.find(tile) != collidedTiles.end() && !isRampTile(tile))
 			return true;
 	}
-	
-	return false;*/
-	if (pos.x <= 0)
-		return true;
+
 	return false;
 }
 
@@ -481,44 +494,73 @@ bool TileMap::collisionMoveUp(const glm::ivec2 &pos, const glm::ivec2 &size, int
 
 bool TileMap::collisionMoveRight(const glm::ivec2 &pos, const glm::ivec2 &size) const
 {
-	/*int x, y0, y1;
-	
-	x = (pos.x + size.x - 1) / tileSize;
-	y0 = pos.y / tileSize;
-	y1 = (pos.y + size.y - 1) / tileSize;
-	for(int y=y0; y<=y1; y++)
+	if(pos.x + size.x > mapSize.x * tileSize) return true;
+
+	const int x = (pos.x + size.x - 1) / tileSize;
+
+	const int probeTopOffsetPx = (size.y * 2) / 5;
+	const int y0 = (pos.y + probeTopOffsetPx) / tileSize;
+	const int y1 = (pos.y + size.y - 1) / tileSize;
+
+	for(int y = y0; y <= y1; ++y)
 	{
-		if(map[y*mapSize.x+x] != 0)
+		if(x < 0 || x >= mapSize.x || y < 0 || y >= mapSize.y)
+			continue;
+
+		const int tile = map[y * mapSize.x + x];
+		if(tile == -2) return true;
+		if(collidedTiles.find(tile) != collidedTiles.end() && !isRampTile(tile))
 			return true;
 	}
-	
-	return false;*/
-	if (pos.x + size.x > mapSize.x * tileSize)
-		return true;
 
 	return false;
 }
 
 bool TileMap::collisionMoveDown(const glm::ivec2 &pos, const glm::ivec2 &size, int *posY) const
 {
-	int x0, x1, y;
-	x0 = pos.x / tileSize;
-	if (x0 < 0)
-		x0 = 0;
-	x1 = (pos.x + size.x - 1) / tileSize;
-	y = (pos.y + size.y - 1) / tileSize;
-	bool tryToClimbDown = Game::instance().getKey(GLFW_KEY_DOWN);
-	for(int x=x0; x<=x1; x++)
+	int x0 = pos.x / tileSize;
+	int x1 = (pos.x + size.x - 1) / tileSize;
+	int y = (pos.y + size.y - 1) / tileSize;
+
+	if(y < 0 || y >= mapSize.y)
+		return false;
+
+	if(x0 < 0) x0 = 0;
+	if(x1 >= mapSize.x) x1 = mapSize.x - 1;
+
+	const int footProbeX = pos.x + (size.x / 2);
+	const int feetWorldY = pos.y + size.y;
+
+	for(int x = x0; x <= x1; ++x)
 	{
-      int tile = map[y * mapSize.x + x];
-		if(collidedTiles.find(tile) != collidedTiles.end() || tile == -2)
+		const int tile = map[y * mapSize.x + x];
+
+		if(tile == -2)
 		{
-				*posY = tileSize * y - size.y;
+			*posY = tileSize * y - size.y;
+			return true;
+		}
+
+		if(collidedTiles.find(tile) == collidedTiles.end())
+			continue;
+
+		if(isRampTile(tile))
+		{
+			const int rampSurfaceY = getRampSurfaceWorldY(x, y, tile, footProbeX);
+			// Allow snap only when feet are at/under ramp plane inside this tile band
+			if(feetWorldY >= rampSurfaceY && feetWorldY <= (y * tileSize + tileSize))
+			{
+				*posY = rampSurfaceY - size.y;
 				return true;
-			//return true;
+			}
+		}
+		else
+		{
+			*posY = tileSize * y - size.y;
+			return true;
 		}
 	}
-	
+
 	return false;
 }
 
@@ -735,4 +777,47 @@ int TileMap::encodeTile(glm::ivec2 pos) const
 glm::ivec2 TileMap::decodeTile(int key) const
 {
 	return glm::ivec2(key % mapSize.x, key / mapSize.x);
+}
+
+bool TileMap::isRampUpRightTile(int tileId) const
+{
+	return rampUpRightTileIds.find(tileId) != rampUpRightTileIds.end();
+}
+
+bool TileMap::isRampUpLeftTile(int tileId) const
+{
+	return rampUpLeftTileIds.find(tileId) != rampUpLeftTileIds.end();
+}
+
+bool TileMap::isRampTile(int tileId) const
+{
+	return isRampUpRightTile(tileId) || isRampUpLeftTile(tileId);
+}
+
+int TileMap::getRampSurfaceWorldY(int tileX, int tileY, int tileId, int worldProbeX) const
+{
+	const int tileLeftX = tileX * tileSize;
+	int localX = worldProbeX - tileLeftX;
+	if(localX < 0) localX = 0;
+	if(localX > tileSize - 1) localX = tileSize - 1;
+
+	// localY is measured from tile top.
+	int localY = 0;
+
+	if(isRampUpRightTile(tileId))
+	{
+		// rises to the right: at x=0 -> bottom, at x=tileSize-1 -> top
+		localY = (tileSize - 1) - localX;
+	}
+	else if(isRampUpLeftTile(tileId))
+	{
+		// rises to the left: at x=0 -> top, at x=tileSize-1 -> bottom
+		localY = localX;
+	}
+	else
+	{
+		localY = 0;
+	}
+
+	return tileY * tileSize + localY;
 }

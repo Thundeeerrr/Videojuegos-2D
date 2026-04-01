@@ -34,7 +34,7 @@ bool Game::update(int deltaTime)
 	case STATE_INTRO:
 		intro.update(deltaTime);
 		if(intro.isFinished())
-            changeState(STATE_CREDITS);
+         changeState(STATE_MENU);
 		break;
 	case STATE_MENU:
 		menu.update(deltaTime);

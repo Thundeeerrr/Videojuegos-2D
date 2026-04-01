@@ -31,10 +31,12 @@ namespace
 	const int LEVEL02_MARKER_BACKGROUND_TILE_ID = 53;
    const int LEVEL02_BOMB_BACKGROUND_TILE_ID = 63;
 	const int LEVEL03_MARKER_BACKGROUND_TILE_ID = 53;
+   const int LEVEL03_WEIGHT_BACKGROUND_TILE_ID = 141;
  const int LEVEL03_CLOCK_BACKGROUND_TILE_ID = 45;
    const int LEVEL03_KEY_BACKGROUND_TILE_ID = 116;
 	const int LEVEL04_MARKER_BACKGROUND_TILE_ID = 53;
 	const int LEVEL05_MARKER_BACKGROUND_TILE_ID = 53;
+   const int LEVEL05_WEIGHT_BACKGROUND_TILE_ID = 68;
  const int LEVEL05_CLOCK_BACKGROUND_TILE_ID = 40;
    const int LEVEL05_BOMB_BACKGROUND_TILE_ID = 132;
 	const int DEFAULT_MARKER_BACKGROUND_TILE_ID = 53;
@@ -124,6 +126,7 @@ bool TileMap::loadLevel(const string &levelFile)
     int markerBackgroundTileId = DEFAULT_MARKER_BACKGROUND_TILE_ID;
     int bombMarkerBackgroundTileId = markerBackgroundTileId;
  int clockMarkerBackgroundTileId = markerBackgroundTileId;
+ int weightMarkerBackgroundTileId = markerBackgroundTileId;
  int keyMarkerBackgroundTileId = -1;
 	rampUpRightTileIds.clear();
 	rampUpLeftTileIds.clear();
@@ -144,6 +147,7 @@ bool TileMap::loadLevel(const string &levelFile)
        doorTileNoStairsRenderTileId = LEVEL05_DOOR_NO_STAIRS_RENDER_TILE_ID;
 		doorTileStairsRenderTileId = LEVEL05_DOOR_STAIRS_RENDER_TILE_ID;
        markerBackgroundTileId = LEVEL05_MARKER_BACKGROUND_TILE_ID;
+     weightMarkerBackgroundTileId = LEVEL05_WEIGHT_BACKGROUND_TILE_ID;
         clockMarkerBackgroundTileId = LEVEL05_CLOCK_BACKGROUND_TILE_ID;
        bombMarkerBackgroundTileId = LEVEL05_BOMB_BACKGROUND_TILE_ID;
 	   rampUpRightTileIds.insert(29);
@@ -167,6 +171,7 @@ bool TileMap::loadLevel(const string &levelFile)
    else if(tilesheetFile.find("level3") != string::npos || tilesheetFile.find("level03") != string::npos)
 	{
 		markerBackgroundTileId = LEVEL03_MARKER_BACKGROUND_TILE_ID;
+       weightMarkerBackgroundTileId = LEVEL03_WEIGHT_BACKGROUND_TILE_ID;
        clockMarkerBackgroundTileId = LEVEL03_CLOCK_BACKGROUND_TILE_ID;
        keyMarkerBackgroundTileId = LEVEL03_KEY_BACKGROUND_TILE_ID;
 	}
@@ -176,6 +181,7 @@ bool TileMap::loadLevel(const string &levelFile)
 		bombMarkerBackgroundTileId = KEY_ROOM_MARKER_BACKGROUND_TILE_ID;
 	}
     bombMarkerBackgroundTileId = (bombMarkerBackgroundTileId == DEFAULT_MARKER_BACKGROUND_TILE_ID) ? markerBackgroundTileId : bombMarkerBackgroundTileId;
+    weightMarkerBackgroundTileId = (weightMarkerBackgroundTileId == DEFAULT_MARKER_BACKGROUND_TILE_ID) ? markerBackgroundTileId : weightMarkerBackgroundTileId;
 	clockMarkerBackgroundTileId = (clockMarkerBackgroundTileId == DEFAULT_MARKER_BACKGROUND_TILE_ID) ? markerBackgroundTileId : clockMarkerBackgroundTileId;
 	tilesheet.loadFromFile(tilesheetFile, TEXTURE_PIXEL_FORMAT_RGBA);
 	tilesheet.setWrapS(GL_CLAMP_TO_EDGE);
@@ -299,7 +305,7 @@ bool TileMap::loadLevel(const string &levelFile)
             else if(tileId == WEIGHT_TILE)
 			{
 				weightPositions.push_back(glm::ivec2(i, j));
-             map[j * mapSize.x + i] = markerBackgroundTileId;
+               map[j * mapSize.x + i] = weightMarkerBackgroundTileId;
 			}
           else if(tileId == TILE_CLOCK)
 			{

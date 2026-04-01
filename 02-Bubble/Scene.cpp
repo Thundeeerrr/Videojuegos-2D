@@ -564,6 +564,11 @@ void Scene::init(const std::string &sceneName)
 			Enemies.push_back(new DonaldEnemy());
 		Enemies[i]->init(glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
 		Enemies[i]->setTileMap(map);
+     if(currentLevelNum == 1)
+		{
+			const glm::ivec2 enemySpawnTile(3, 5);
+			Enemies[i]->setPosition(glm::vec2(enemySpawnTile.x * map->getTileSize(), enemySpawnTile.y * map->getTileSize()));
+		}
        if(currentLevelNum == 2)
 		{
 			const glm::ivec2 enemySpawnTile(3, 5);

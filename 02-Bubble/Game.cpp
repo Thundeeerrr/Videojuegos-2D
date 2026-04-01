@@ -100,6 +100,12 @@ void Game::keyPressed(int key)
 
 	keys[key] = true;
 
+	if(key == GLFW_KEY_O)
+	{
+		changeState(STATE_INTRO);
+		return;
+	}
+
   if(currentState == STATE_INTRO)
 		intro.skip();
 	else if(currentState == STATE_CREDITS)

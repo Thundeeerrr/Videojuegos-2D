@@ -94,6 +94,7 @@ namespace
 	{
 		if(levelNum == 2)
 		{
+           // Level 2 (row,col): (7,3)->bomb, (5,8)->shield, (5,15)->empty.
 			if(doorTilePos == glm::ivec2(3, 7))
 				return ITEM_ROOM_BOMB;
 			if(doorTilePos == glm::ivec2(8, 5))
@@ -103,15 +104,17 @@ namespace
 		}
 		else if(levelNum == 3)
 		{
+          // Level 3 (row,col): (1,13)->empty, (5,9)->shield, (7,14)->bomb.
+			if(doorTilePos == glm::ivec2(13, 1))
+				return ITEM_ROOM_EMPTY_KEY;
 			if(doorTilePos == glm::ivec2(9, 5))
 				return ITEM_ROOM_SHIELD;
             if(doorTilePos == glm::ivec2(14, 7))
 				return ITEM_ROOM_BOMB;
-			if(doorTilePos == glm::ivec2(13, 1))
-				return ITEM_ROOM_EMPTY_KEY;
 		}
-      else if(levelNum == 4)
+        else if(levelNum == 4)
 		{
+         // Level 4 (row,col): (9,14)->empty, (1,14)->empty, (1,7)->bomb.
 			if(doorTilePos == glm::ivec2(7, 1))
 				return ITEM_ROOM_BOMB;
 			if(doorTilePos == glm::ivec2(14, 1))
@@ -119,21 +122,15 @@ namespace
 			if(doorTilePos == glm::ivec2(14, 9))
 				return ITEM_ROOM_EMPTY_KEY;
 		}
-      else if(levelNum == 5)
+        else if(levelNum == 5)
 		{
+         // Level 5 (row,col): (6,6)->empty, (4,4)->shield, (8,13)->bomb.
 			if(doorTilePos == glm::ivec2(6, 6))
 				return ITEM_ROOM_EMPTY_KEY;
 			if(doorTilePos == glm::ivec2(13, 8))
 				return ITEM_ROOM_BOMB;
 			if(doorTilePos == glm::ivec2(4, 4))
 				return ITEM_ROOM_SHIELD;
-		}
-		else if(levelNum == 4)
-		{
-			if(doorTilePos == glm::ivec2(14, 9))
-				return ITEM_ROOM_EMPTY_KEY;
-			if(doorTilePos == glm::ivec2(7, 1))
-				return ITEM_ROOM_BOMB;
 		}
 
 		return ITEM_ROOM_KEY;
@@ -1530,12 +1527,6 @@ void Scene::loadLevel(int levelNum)
 			carriedBomb->collect();
 			bombs.push_back(carriedBomb);
 		}
-	 if (hasReturnPoint && containsDoorTile(collectedRoomKeys[returnLevelNum], returnTilePos) || kWasPressed)	
-	 {
-		 init("levels/KeyRoom_collected.txt");
-		 cout << "Loading key room with collected keys: " << collectedRoomKeys[returnLevelNum].size() << endl;
-	 }
-	 else init("levels/KeyRoom.txt");
 		return;
 	}
 	if(levelNum < 1)

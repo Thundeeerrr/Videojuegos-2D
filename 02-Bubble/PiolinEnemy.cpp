@@ -1,3 +1,4 @@
+#include <cmath>
 #include "PiolinEnemy.h"
 
 const char* PiolinEnemy::getTextureFile() const
@@ -7,7 +8,7 @@ const char* PiolinEnemy::getTextureFile() const
 
 glm::ivec2 PiolinEnemy::getFrameSizePx() const
 {
-	return glm::ivec2(12, 8);
+   return glm::ivec2(16, 32);
 }
 
 void PiolinEnemy::configureAnimations(float texW, float texH)
@@ -23,21 +24,116 @@ void PiolinEnemy::configureAnimations(float texW, float texH)
 	sprite->addKeyframe(STAND, uv(0, 0));
 
 	sprite->setAnimationSpeed(WALK, 12);
+    sprite->addKeyframe(WALK, uv(0, 0));
 	sprite->addKeyframe(WALK, uv(1, 0));
 	sprite->addKeyframe(WALK, uv(2, 0));
-	sprite->addKeyframe(WALK, uv(3, 0));
 }
 
-void PiolinEnemy::stepAI(int, const glm::ivec2 &bugsTilePos)
+void PiolinEnemy::stepAI(int deltaTime, const glm::ivec2 &bugsTilePos)
 {
-	if(canSeeBugs(bugsTilePos))
+ const glm::ivec2 myTile = getMyTile();
+	const int dx = bugsTilePos.x - myTile.x;
+	const int dy = bugsTilePos.y - myTile.y;
+
+	auto moveTowardTileHorizontal = [&](const glm::ivec2 &targetTile)
 	{
-		setState(State::CHASE);
-		//moveTowardTile(bugsTilePos);
-	}
-	else
+		const int localDx = targetTile.x - getMyTile().x;
+		if(localDx > 0)
+			moveHorizontal(1, MOVE_STEP_PX);
+		else if(localDx < 0)
+			moveHorizontal(-1, MOVE_STEP_PX);
+	};
+
+	const bool canChaseHorizontally = (dy == 0 && std::abs(dx) <= getVisionRangeTiles());
+
+	switch(getState())
 	{
-		setState(State::PATROL);
-		patrolStep();
+     case State::PATROL:
+		{
+			if(canChaseHorizontally)
+			{
+				setState(State::CHASE);
+				setLastSeenBugsTile(bugsTilePos);
+				setSearchTimerMs(0);
+				moveTowardTileHorizontal(bugsTilePos);
+			}
+			else
+				patrolStep();
+			break;
+		}
+
+		case State::CHASE:
+		{
+			if(canChaseHorizontally)
+			{
+				setLastSeenBugsTile(bugsTilePos);
+				setSearchTimerMs(0);
+				moveTowardTileHorizontal(bugsTilePos);
+			}
+			else
+			{
+				setState(State::SEARCH);
+				setSearchTimerMs(getSearchDurationMs());
+			}
+			break;
+		}
+
+		case State::SEARCH:
+		{
+			if(canChaseHorizontally)
+			{
+				setState(State::CHASE);
+				setLastSeenBugsTile(bugsTilePos);
+				setSearchTimerMs(0);
+				moveTowardTileHorizontal(bugsTilePos);
+			}
+			else
+			{
+				setSearchTimerMs(getSearchTimerMs() - deltaTime);
+				if(getSearchTimerMs() <= 0)
+				{
+					setState(State::PATROL);
+					pickPatrolDirection();
+				}
+				else
+					moveTowardTileHorizontal(getLastSeenBugsTile());
+			}
+			break;
+		}
 	}
+
+}
+
+void PiolinEnemy::enforceHorizontalPatrolRange(float minX, float maxX)
+{
+	glm::vec2 pos = getPosition();
+
+	if(pos.x <= minX)
+	{
+		pos.x = minX;
+		patrolDir = glm::ivec2(1, 0);
+		facingRight = true;
+	}
+	else if(pos.x >= maxX)
+	{
+		pos.x = maxX;
+		patrolDir = glm::ivec2(-1, 0);
+		facingRight = false;
+	}
+
+	if(!hasPatrolBaseY)
+	{
+		hasPatrolBaseY = true;
+		int correctedY = int(std::round(pos.y));
+		if(map != NULL)
+			map->collisionMoveDown(glm::ivec2(int(std::round(pos.x)), correctedY), glm::ivec2(COLLISION_W_PX, COLLISION_H_PX), &correctedY);
+       const int oneTilePx = (map != NULL) ? map->getTileSize() : COLLISION_H_PX;
+		// Enemy world Y is top-left of collision box. In this constrained patrol case,
+		// we lift one tile so Piolin's feet rest on the platform top like Donald/player.
+		patrolBaseY = correctedY - oneTilePx;
+	}
+
+	// Keep Piolin on his original patrol platform Y in constrained patrol maps.
+	pos.y = float(patrolBaseY);
+	setPosition(pos);
 }

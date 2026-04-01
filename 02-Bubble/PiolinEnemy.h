@@ -7,6 +7,7 @@ class PiolinEnemy : public Enemy
 {
 public:
 	Type getType() const override { return Type::PIOLIN; }
+	void enforceHorizontalPatrolRange(float minX, float maxX);
 
 protected:
 	const char* getTextureFile() const override;
@@ -14,6 +15,10 @@ protected:
 	void configureAnimations(float texW, float texH) override;
 	void stepAI(int deltaTime, const glm::ivec2 &bugsTilePos) override;
 	int getVisionRangeTiles() const override { return 8; }
+
+private:
+	bool hasPatrolBaseY = false;
+	int patrolBaseY = 0;
 };
 
 #endif // _PIOLIN_ENEMY_INCLUDE

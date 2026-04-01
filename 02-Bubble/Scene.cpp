@@ -70,6 +70,8 @@ namespace
 	const int HUD_BOMB_ICON_SIZE_PX = 16;
 	const int HUD_ICON_SPACING_PX = 15;
     const int HUD_BOMB_ROW_Y_PX = 16;
+    const int LEVEL02_PIOLIN_MIN_COL = 4;
+	const int LEVEL02_PIOLIN_MAX_COL = 14;
 
 	bool containsDoorTile(const std::vector<glm::ivec2> &tiles, const glm::ivec2 &tile)
 	{
@@ -381,9 +383,17 @@ void Scene::init(const std::string &sceneName)
 	{
 		cout << "Initializing enemy " << i << endl;
 		if (currentLevelNum == 0)	break;
-		Enemies.push_back(new DonaldEnemy());
+     if(currentLevelNum == 2 || currentLevelNum >= 4)
+			Enemies.push_back(new PiolinEnemy());
+		else
+			Enemies.push_back(new DonaldEnemy());
 		Enemies[i]->init(glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
 		Enemies[i]->setTileMap(map);
+       if(currentLevelNum == 2)
+		{
+			const glm::ivec2 enemySpawnTile(3, 5);
+			Enemies[i]->setPosition(glm::vec2(enemySpawnTile.x * map->getTileSize(), enemySpawnTile.y * map->getTileSize()));
+		}
 	}
     bool shouldPlayDoorExitAnimation = false;
     bool shouldKeepSpawnDoorOpen = false;
@@ -646,15 +656,35 @@ void Scene::update(int deltaTime)
 	spaceWasPressed = spacePressed;
 
 	glm::ivec2 playerTilePos((int(playerPos.x) + 8) / map->getTileSize(),(int(playerPos.y) + 15) / map->getTileSize());
+    auto getEnemyInteractionPos = [&](Enemy *enemy) -> glm::vec2
+	{
+		glm::vec2 pos = enemy->getPosition();
+		if(currentLevelNum == 2 && enemy->getType() == Enemy::Type::PIOLIN)
+		{
+			// Piolin patrol uses a visual-alignment Y lock in level 2.
+			// Shift interaction box one tile down so player/items contact matches
+			// on-screen sprite contact without moving enemy rendering.
+			pos.y += float(map->getTileSize());
+		}
+		return pos;
+	};
 	for (int i = 0; i < Enemies.size(); ++i)	
 	{
 		Enemies[i]->update(deltaTime, playerPos);
+       if(currentLevelNum == 2 && Enemies[i]->getType() == Enemy::Type::PIOLIN)
+		{
+			const int tileSize = map->getTileSize();
+			const float minX = float(LEVEL02_PIOLIN_MIN_COL * tileSize);
+			const float maxX = float(LEVEL02_PIOLIN_MAX_COL * tileSize);
+            PiolinEnemy *piolin = static_cast<PiolinEnemy*>(Enemies[i]);
+			piolin->enforceHorizontalPatrolRange(minX, maxX);
+		}
 	}
 	for (int i = 0; i < int(Enemies.size()); )
 	{
 		bool killedByWeight = false;
 		int bombHitIndex = -1;
-		glm::vec2 enemyPos = Enemies[i]->getPosition();
+     glm::vec2 enemyPos = getEnemyInteractionPos(Enemies[i]);
 		glm::ivec2 enemySize = Enemies[i]->getCollisionSize();
 		for(int j = 0; j < int(weights.size()) && !killedByWeight; ++j)
 		{
@@ -701,7 +731,7 @@ void Scene::update(int deltaTime)
 		glm::ivec2 playerSizeNow = player->getSize();
 		for(int i = 0; i < int(Enemies.size()); ++i)
 		{
-			if(collidesWith(playerPosNow, playerSizeNow, Enemies[i]->getPosition(), Enemies[i]->getCollisionSize()))
+            if(collidesWith(playerPosNow, playerSizeNow, getEnemyInteractionPos(Enemies[i]), Enemies[i]->getCollisionSize()))
 			{
                if(player->hasShield())
                 {

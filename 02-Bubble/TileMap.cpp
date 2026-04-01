@@ -29,6 +29,7 @@ namespace
 	const int TILE_KEY = 998;
   const int LEVEL01_MARKER_BACKGROUND_TILE_ID = 53;
 	const int LEVEL02_MARKER_BACKGROUND_TILE_ID = 53;
+   const int LEVEL02_BOMB_BACKGROUND_TILE_ID = 63;
 	const int LEVEL03_MARKER_BACKGROUND_TILE_ID = 53;
 	const int LEVEL04_MARKER_BACKGROUND_TILE_ID = 53;
 	const int LEVEL05_MARKER_BACKGROUND_TILE_ID = 53;
@@ -116,6 +117,7 @@ bool TileMap::loadLevel(const string &levelFile)
     doorTileStairsRenderTileId = -1;
 	doorTileNoStairsRenderTileId = -1;
     int markerBackgroundTileId = DEFAULT_MARKER_BACKGROUND_TILE_ID;
+    int bombMarkerBackgroundTileId = markerBackgroundTileId;
 	if(tilesheetFile.find("level4-def") != string::npos)
 	{
 		tubeTopRenderTileId = LEVEL04_TUBE_TOP_RENDER_TILE_ID;
@@ -143,11 +145,13 @@ bool TileMap::loadLevel(const string &levelFile)
 		doorTileNoStairsRenderTileId = LEVEL02_DOOR_NO_STAIRS_RENDER_TILE_ID;
 		doorTileStairsRenderTileId = LEVEL02_DOOR_STAIRS_RENDER_TILE_ID;
        markerBackgroundTileId = LEVEL02_MARKER_BACKGROUND_TILE_ID;
+       bombMarkerBackgroundTileId = LEVEL02_BOMB_BACKGROUND_TILE_ID;
 	}
 	else if(tilesheetFile.find("level3") != string::npos)
 	{
 		markerBackgroundTileId = LEVEL03_MARKER_BACKGROUND_TILE_ID;
 	}
+   bombMarkerBackgroundTileId = (bombMarkerBackgroundTileId == DEFAULT_MARKER_BACKGROUND_TILE_ID) ? markerBackgroundTileId : bombMarkerBackgroundTileId;
 	tilesheet.loadFromFile(tilesheetFile, TEXTURE_PIXEL_FORMAT_RGBA);
 	tilesheet.setWrapS(GL_CLAMP_TO_EDGE);
 	tilesheet.setWrapT(GL_CLAMP_TO_EDGE);
@@ -282,7 +286,7 @@ bool TileMap::loadLevel(const string &levelFile)
 			else if(tileId == TILE_BOMB)
 			{
 				bombPositions.push_back(glm::ivec2(i, j));
-              map[j * mapSize.x + i] = markerBackgroundTileId;
+              map[j * mapSize.x + i] = bombMarkerBackgroundTileId;
 			}
 			else
 				map[j * mapSize.x + i] = tileId;

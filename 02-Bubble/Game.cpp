@@ -116,8 +116,8 @@ void Game::keyPressed(int key)
 	{
 		if(key == GLFW_KEY_G)
 			scene.toggleGodMode();
-		else if(key == GLFW_KEY_K)
-			scene.giveAllKeys();
+		//else if(key == GLFW_KEY_K)
+			//scene.giveAllKeys();
         else if(key == GLFW_KEY_R)
          scene.restartCurrentLevel();
      else if(key >= GLFW_KEY_1 && key <= GLFW_KEY_9)

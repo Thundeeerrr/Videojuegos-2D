@@ -202,6 +202,7 @@ Scene::Scene()
 	pauseActive = false;
 	pWasPressed = false;
 	hWasPressed = false;
+	kWasPressed = false;
    enemyExplosions.clear();
   enemyBullets.clear();
    remainingLives = MAX_LIVES;
@@ -266,6 +267,7 @@ void Scene::init(const std::string &sceneName)
 	freeShieldItems();
 	freeClockItems();
 	map = TileMap::createTileMap(sceneName, glm::vec2(SCREEN_X, SCREEN_Y), texProgram);
+	setNeededKeys();
  map->clearDoorLinks();
    if(currentLevelNum == 2)
 	{
@@ -646,6 +648,12 @@ void Scene::update(int deltaTime)
 	currentTime += deltaTime;
     bool pPressed = Game::instance().getKey(GLFW_KEY_P);
 	bool hPressed = Game::instance().getKey(GLFW_KEY_H);
+	bool kPressed = Game::instance().getKey(GLFW_KEY_K);
+	if (kPressed)	
+	{
+		kWasPressed = true;
+		addKeys(neededKeys - totalKeys);
+	}
 	if(pPressed && !pWasPressed && !gameOverActive && !playerDeathActive)
 		pauseActive = !pauseActive;
 
@@ -1012,13 +1020,13 @@ void Scene::update(int deltaTime)
 	}
 	for (int i = 0; i < int(keys.size()); )
 	{
-		if (keys[i]->getTilePos() == playerTilePos)
+		if (keys[i]->getTilePos() == playerTilePos || kWasPressed)
 		{
-			player->addKey();
+			addKeys(1);
 			map->removeKeyAtTile(keys[i]->getTilePos());
 			delete keys[i];
 			keys.erase(keys.begin() + i);
-			if (currentLevelNum == 0 && hasReturnPoint)
+			if (currentLevelNum == 0 && hasReturnPoint || kWasPressed)
 			{
 				if (!containsDoorTile(collectedRoomKeys[returnLevelNum], returnTilePos))
 					collectedRoomKeys[returnLevelNum].push_back(returnTilePos);
@@ -1184,7 +1192,7 @@ void Scene::render()
 
 	if(bombHudVao != 0)
 	{
-      int keyCount = player->getKeyCount();
+      int keyCount = getKeyCount();
 		if(keyCount < 0) keyCount = 0;
 		if(keyCount > 9) keyCount = 9;
 		if(keyHudVao != 0)
@@ -1418,7 +1426,9 @@ void Scene::giveAllKeys()
 	if(hadKeys && currentLevelNum == 0 && hasReturnPoint)
 	{
 		if(!containsDoorTile(collectedRoomKeys[returnLevelNum], returnTilePos))
+		{
 			collectedRoomKeys[returnLevelNum].push_back(returnTilePos);
+		}
 	}
 }
 
@@ -1465,7 +1475,11 @@ void Scene::loadLevel(int levelNum)
 	// Normal transitions should respawn, so discard any suspended snapshot.
 	if(levelNum != 0)
 		clearSuspendedLevel();
-
+	if (levelNum != 0)	
+	{
+		setTotalKeys(0);
+		kWasPressed = false;
+	}
  if(map != NULL)
 	{
 		delete map;
@@ -1516,6 +1530,12 @@ void Scene::loadLevel(int levelNum)
 			carriedBomb->collect();
 			bombs.push_back(carriedBomb);
 		}
+	 if (hasReturnPoint && containsDoorTile(collectedRoomKeys[returnLevelNum], returnTilePos) || kWasPressed)	
+	 {
+		 init("levels/KeyRoom_collected.txt");
+		 cout << "Loading key room with collected keys: " << collectedRoomKeys[returnLevelNum].size() << endl;
+	 }
+	 else init("levels/KeyRoom.txt");
 		return;
 	}
 	if(levelNum < 1)
@@ -1718,3 +1738,22 @@ void Scene::restoreSuspendedLevelFromKeyRoom()
 	suspendedLevelNum = -1;
 }
 
+int Scene::getKeyCount() const
+{
+	return totalKeys;
+}
+
+void Scene::addKeys(int number)
+{
+	totalKeys += number;
+}
+
+void Scene::setTotalKeys(int number)
+{
+	totalKeys = number;
+}
+
+void Scene::setNeededKeys()
+{
+	neededKeys = map->getKeyCount();
+}

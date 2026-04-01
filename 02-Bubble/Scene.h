@@ -63,6 +63,10 @@ private:
 	void suspendCurrentLevelForKeyRoom();
 	void restoreSuspendedLevelFromKeyRoom();
 	void clearSuspendedLevel();
+	int getKeyCount() const;
+	void addKeys(int number);
+	void setNeededKeys();
+	void setTotalKeys(int number);
 
 private:
 	TileMap *map;
@@ -126,6 +130,7 @@ private:
   bool pauseActive;
 	bool pWasPressed;
 	bool hWasPressed;
+	bool kWasPressed;
 	std::vector<EnemyExplosion> enemyExplosions;
  std::vector<EnemyBullet> enemyBullets;
 	int remainingLives;
@@ -145,6 +150,8 @@ private:
 	std::vector<Enemy*> suspendedEnemies;
 	std::vector<bool> suspendedWeightPushLatch;
   std::vector<EnemyBullet> suspendedEnemyBullets;
+  int neededKeys;
+  int totalKeys;
 };
 
 

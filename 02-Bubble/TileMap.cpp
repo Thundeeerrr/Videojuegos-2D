@@ -200,7 +200,7 @@ bool TileMap::loadLevel(const string &levelFile)
 	getline(fin, line);
 	sstream.clear();
 	sstream.str(line);
-	sstream >> stair;
+	sstream >> stair >> keyCount;
 
 	map = new int[mapSize.x * mapSize.y];
 	int tileId;

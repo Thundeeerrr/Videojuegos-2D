@@ -82,6 +82,7 @@ public:
 	void addDoorLink(glm::ivec2 a, glm::ivec2 b);
 	void clearDoorLinks();
 	glm::ivec2 getDoorDestination(glm::ivec2 tilePos) const;
+	int getKeyCount() const { return keyCount; }
 
 private:
 	bool loadLevel(const string &levelFile);
@@ -116,8 +117,7 @@ private:
 	int stair;
 	std::unordered_set<glm::ivec2, IVec2Hash> keyPositions;
   std::unordered_map<int, int> doorLinks;
-  int neededKeys;
-  int totalKeys;
+  int keyCount;
 };
 
 

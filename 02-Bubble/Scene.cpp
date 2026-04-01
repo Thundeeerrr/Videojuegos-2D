@@ -83,6 +83,8 @@ namespace
 	const int ENEMY_BULLET_SPAWN_OFFSET_Y_PX = 0;
     const int LEVEL02_PIOLIN_MIN_COL = 4;
 	const int LEVEL02_PIOLIN_MAX_COL = 14;
+   const int LEVEL04_PIOLIN_MIN_COL = 4;
+	const int LEVEL04_PIOLIN_MAX_COL = 10;
 	const int LEVEL05_FRANCO_MIN_COL = 2;
 	const int LEVEL05_FRANCO_MAX_COL = 13;
 	const int ITEM_ROOM_KEY = 0;
@@ -549,11 +551,12 @@ void Scene::init(const std::string &sceneName)
 	player->init(glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
  player->setLives(remainingLives);
  player->setGodModeShieldVisual(godMode);
-	for (int i = 0; i < 1; ++i)
+    const int enemyCount = (currentLevelNum == 5) ? 2 : 1;
+	for (int i = 0; i < enemyCount; ++i)
 	{
 		cout << "Initializing enemy " << i << endl;
       if (currentLevelNum == 0)	break;
-		if(currentLevelNum == 2 || currentLevelNum == 4)
+      if(currentLevelNum == 2 || currentLevelNum == 4)
 			Enemies.push_back(new PiolinEnemy());
 		else if(currentLevelNum >= 5)
 			Enemies.push_back(new FrancoEnemy());
@@ -566,10 +569,31 @@ void Scene::init(const std::string &sceneName)
 			const glm::ivec2 enemySpawnTile(3, 5);
 			Enemies[i]->setPosition(glm::vec2(enemySpawnTile.x * map->getTileSize(), enemySpawnTile.y * map->getTileSize()));
 		}
-       else if(currentLevelNum == 5)
+       else if(currentLevelNum == 4)
 		{
-			const glm::ivec2 enemySpawnTile(2, 4);
+			// Requested spawn in (row, col) = (3, 4) -> world tile (x, y) = (4, 3)
+			const glm::ivec2 enemySpawnTile(4, 3);
 			Enemies[i]->setPosition(glm::vec2(enemySpawnTile.x * map->getTileSize(), enemySpawnTile.y * map->getTileSize()));
+		}
+       else if(currentLevelNum == 5 && Enemies[i]->getType() == Enemy::Type::FRANCO)
+		{
+          const glm::ivec2 enemySpawnTile = (i == 0) ? glm::ivec2(2, 4) : glm::ivec2(3, 5);
+			Enemies[i]->setPosition(glm::vec2(enemySpawnTile.x * map->getTileSize(), enemySpawnTile.y * map->getTileSize()));
+		}
+
+		if(Enemies[i]->getType() == Enemy::Type::PIOLIN)
+		{
+			const int tileSize = map->getTileSize();
+			int minCol = LEVEL02_PIOLIN_MIN_COL;
+			int maxCol = LEVEL02_PIOLIN_MAX_COL;
+			if(currentLevelNum == 4)
+			{
+				minCol = LEVEL04_PIOLIN_MIN_COL;
+				maxCol = LEVEL04_PIOLIN_MAX_COL;
+			}
+
+			PiolinEnemy *piolin = static_cast<PiolinEnemy*>(Enemies[i]);
+			piolin->enforceHorizontalPatrolRange(float(minCol * tileSize), float(maxCol * tileSize));
 		}
 	}
     bool shouldPlayDoorExitAnimation = false;
@@ -865,14 +889,16 @@ void Scene::update(int deltaTime)
 	{
 		return enemy->getPosition();
 	};
-	for (int i = 0; i < Enemies.size(); ++i)	
+    for (int i = 0; i < Enemies.size(); ++i)	
 	{
 		Enemies[i]->update(deltaTime, playerPos);
-       if(currentLevelNum == 2 && Enemies[i]->getType() == Enemy::Type::PIOLIN)
+     if((currentLevelNum == 2 || currentLevelNum == 4) && Enemies[i]->getType() == Enemy::Type::PIOLIN)
 		{
 			const int tileSize = map->getTileSize();
-			const float minX = float(LEVEL02_PIOLIN_MIN_COL * tileSize);
-			const float maxX = float(LEVEL02_PIOLIN_MAX_COL * tileSize);
+            const int minCol = (currentLevelNum == 4) ? LEVEL04_PIOLIN_MIN_COL : LEVEL02_PIOLIN_MIN_COL;
+			const int maxCol = (currentLevelNum == 4) ? LEVEL04_PIOLIN_MAX_COL : LEVEL02_PIOLIN_MAX_COL;
+			const float minX = float(minCol * tileSize);
+			const float maxX = float(maxCol * tileSize);
             PiolinEnemy *piolin = static_cast<PiolinEnemy*>(Enemies[i]);
 			piolin->enforceHorizontalPatrolRange(minX, maxX);
 		}

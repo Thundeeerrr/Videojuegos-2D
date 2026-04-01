@@ -38,10 +38,20 @@ void PiolinEnemy::stepAI(int deltaTime, const glm::ivec2 &bugsTilePos)
 	auto moveTowardTileHorizontal = [&](const glm::ivec2 &targetTile)
 	{
 		const int localDx = targetTile.x - getMyTile().x;
-		if(localDx > 0)
-			moveHorizontal(1, MOVE_STEP_PX);
+     if(localDx > 0)
+		{
+			if(hasHorizontalRange && getPosition().x >= rangeMaxX)
+				moveHorizontal(-1, MOVE_STEP_PX);
+			else
+				moveHorizontal(1, MOVE_STEP_PX);
+		}
 		else if(localDx < 0)
-			moveHorizontal(-1, MOVE_STEP_PX);
+		{
+			if(hasHorizontalRange && getPosition().x <= rangeMinX)
+				moveHorizontal(1, MOVE_STEP_PX);
+			else
+				moveHorizontal(-1, MOVE_STEP_PX);
+		}
 	};
 
 	const bool canChaseHorizontally = (dy == 0 && std::abs(dx) <= getVisionRangeTiles());
@@ -106,6 +116,10 @@ void PiolinEnemy::stepAI(int deltaTime, const glm::ivec2 &bugsTilePos)
 
 void PiolinEnemy::enforceHorizontalPatrolRange(float minX, float maxX)
 {
+  hasHorizontalRange = true;
+	rangeMinX = minX;
+	rangeMaxX = maxX;
+
 	glm::vec2 pos = getPosition();
 
 	if(pos.x <= minX)

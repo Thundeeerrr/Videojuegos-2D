@@ -35,6 +35,8 @@ namespace
    const int LEVEL03_KEY_BACKGROUND_TILE_ID = 116;
 	const int LEVEL04_MARKER_BACKGROUND_TILE_ID = 53;
 	const int LEVEL05_MARKER_BACKGROUND_TILE_ID = 53;
+ const int LEVEL05_CLOCK_BACKGROUND_TILE_ID = 40;
+   const int LEVEL05_BOMB_BACKGROUND_TILE_ID = 132;
 	const int DEFAULT_MARKER_BACKGROUND_TILE_ID = 53;
   const int KEY_ROOM_MARKER_BACKGROUND_TILE_ID = 46;
 	const int TILE_BOMB = 983;
@@ -142,6 +144,8 @@ bool TileMap::loadLevel(const string &levelFile)
        doorTileNoStairsRenderTileId = LEVEL05_DOOR_NO_STAIRS_RENDER_TILE_ID;
 		doorTileStairsRenderTileId = LEVEL05_DOOR_STAIRS_RENDER_TILE_ID;
        markerBackgroundTileId = LEVEL05_MARKER_BACKGROUND_TILE_ID;
+        clockMarkerBackgroundTileId = LEVEL05_CLOCK_BACKGROUND_TILE_ID;
+       bombMarkerBackgroundTileId = LEVEL05_BOMB_BACKGROUND_TILE_ID;
 	   rampUpRightTileIds.insert(29);
 	   rampUpRightTileIds.insert(224);
 	   rampUpLeftTileIds.insert(26);

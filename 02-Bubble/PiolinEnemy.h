@@ -19,6 +19,9 @@ protected:
 private:
 	bool hasPatrolBaseY = false;
 	int patrolBaseY = 0;
+  bool hasHorizontalRange = false;
+	float rangeMinX = 0.f;
+	float rangeMaxX = 0.f;
 };
 
 #endif // _PIOLIN_ENEMY_INCLUDE

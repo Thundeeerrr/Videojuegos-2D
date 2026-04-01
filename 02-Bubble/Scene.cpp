@@ -28,10 +28,16 @@ namespace
 	const int EXPLOSION_FRAME_COUNT = 5;
 	const int EXPLOSION_DURATION_MS = 400;
    const int CLOCK_FREEZE_DURATION_MS = 3000;
-   const int LEVEL_COMPLETED_DURATION_MS = 4000;
+    const int LEVEL_COMPLETED_DURATION_MS = 5000;
+   const int NEXT_LEVEL_BLINK_INTERVAL_MS = 500;
+   const int LEVEL_COMPLETE_STARS_COUNT = 3;
+	const int LEVEL_COMPLETE_STARS_SIZE_PX = 32;
+	const int LEVEL_COMPLETE_STARS_ANIM_FPS = 6;
+	const int LEVEL_COMPLETE_STARS_Y_BOTTOM_MARGIN_PX = 36;
   const int GAME_OVER_DURATION_MS = 5000;
 	const int GAME_OVER_APPEAR_TIME_MS = 700;
 	const float GAME_OVER_DARKEN_FACTOR = 0.45f;
+  const float LEVEL_COMPLETED_DARKEN_FACTOR = 0.25f;
     const int SHIELD_HIT_INVULN_TIME_MS = 600;
    const float PAUSE_MENU_DARKEN_FACTOR = 0.45f;
 	const int HUD_BOMB_ICON_SIZE_PX = 16;
@@ -124,6 +130,9 @@ Scene::~Scene()
 		glDeleteVertexArrays(1, &bombHudVao);
 	if(bombHudVbo != 0)
 		glDeleteBuffers(1, &bombHudVbo);
+   for(int i = 0; i < int(levelCompletedStars.size()); ++i)
+		delete levelCompletedStars[i];
+	levelCompletedStars.clear();
 }
 
 
@@ -294,11 +303,49 @@ void Scene::init(const std::string &sceneName)
 	levelCompletedTexture.setMinFilter(GL_NEAREST);
 	levelCompletedTexture.setMagFilter(GL_NEAREST);
 
+	nextLevelTexture.loadFromFile("images/nxtlev.png", TEXTURE_PIXEL_FORMAT_RGBA);
+	nextLevelTexture.setWrapS(GL_CLAMP_TO_EDGE);
+	nextLevelTexture.setWrapT(GL_CLAMP_TO_EDGE);
+	nextLevelTexture.setMinFilter(GL_NEAREST);
+	nextLevelTexture.setMagFilter(GL_NEAREST);
+
 	pauseMenuTexture.loadFromFile("images/Pause-Menu.png", TEXTURE_PIXEL_FORMAT_RGBA);
 	pauseMenuTexture.setWrapS(GL_CLAMP_TO_EDGE);
 	pauseMenuTexture.setWrapT(GL_CLAMP_TO_EDGE);
 	pauseMenuTexture.setMinFilter(GL_NEAREST);
 	pauseMenuTexture.setMagFilter(GL_NEAREST);
+
+	starsTexture.loadFromFile("images/stars.png", TEXTURE_PIXEL_FORMAT_RGBA);
+	starsTexture.setWrapS(GL_CLAMP_TO_EDGE);
+	starsTexture.setWrapT(GL_CLAMP_TO_EDGE);
+	starsTexture.setMinFilter(GL_NEAREST);
+	starsTexture.setMagFilter(GL_NEAREST);
+	for(int i = 0; i < int(levelCompletedStars.size()); ++i)
+		delete levelCompletedStars[i];
+	levelCompletedStars.clear();
+
+   const float starsMapPixelW = map->getMapSize().x * map->getTileSize();
+	const float starsMapPixelH = map->getMapSize().y * map->getTileSize();
+	const float starsY = starsMapPixelH - float(LEVEL_COMPLETE_STARS_Y_BOTTOM_MARGIN_PX + LEVEL_COMPLETE_STARS_SIZE_PX);
+	for(int i = 0; i < LEVEL_COMPLETE_STARS_COUNT; ++i)
+	{
+		Sprite *star = Sprite::createSprite(
+			glm::ivec2(LEVEL_COMPLETE_STARS_SIZE_PX, LEVEL_COMPLETE_STARS_SIZE_PX),
+			glm::vec2(1.f / 3.f, 1.f),
+			&starsTexture,
+			&texProgram);
+		star->setNumberAnimations(1);
+		star->setAnimationSpeed(0, LEVEL_COMPLETE_STARS_ANIM_FPS);
+		star->addKeyframe(0, glm::vec2(0.f / 3.f, 0.f));
+		star->addKeyframe(0, glm::vec2(1.f / 3.f, 0.f));
+		star->addKeyframe(0, glm::vec2(2.f / 3.f, 0.f));
+		star->changeAnimation(0);
+
+		const float xNormalized = float(i + 1) / float(LEVEL_COMPLETE_STARS_COUNT + 1);
+      const float starX = (starsMapPixelW * xNormalized) - (LEVEL_COMPLETE_STARS_SIZE_PX * 0.5f);
+		star->setPosition(glm::vec2(starX, starsY));
+		levelCompletedStars.push_back(star);
+	}
 	player = new Player();
 	player->init(glm::ivec2(SCREEN_X, SCREEN_Y), texProgram);
  player->setLives(remainingLives);
@@ -427,6 +474,9 @@ void Scene::update(int deltaTime)
 
 	if(levelCompletedActive)
 	{
+     for(int i = 0; i < int(levelCompletedStars.size()); ++i)
+			levelCompletedStars[i]->update(deltaTime);
+
 		levelCompletedTimerMs -= deltaTime;
 		if(levelCompletedTimerMs <= 0)
 		{
@@ -792,7 +842,7 @@ void Scene::render()
 	if(gameOverActive)
 		sceneDarken = GAME_OVER_DARKEN_FACTOR;
 	else if(levelCompletedActive)
-		sceneDarken = PAUSE_MENU_DARKEN_FACTOR;
+     sceneDarken = LEVEL_COMPLETED_DARKEN_FACTOR;
 	else if(pauseActive)
 		sceneDarken = PAUSE_MENU_DARKEN_FACTOR;
 
@@ -886,6 +936,12 @@ void Scene::render()
 	if(levelCompletedActive && gameOverVao != 0)
 	{
 		renderFullScreenOverlay(levelCompletedTexture, 1.0f);
+     const int blinkPhase = levelCompletedTimerMs / NEXT_LEVEL_BLINK_INTERVAL_MS;
+		if((blinkPhase % 2) == 0)
+			renderFullScreenOverlay(nextLevelTexture, 1.0f);
+
+		for(int i = 0; i < int(levelCompletedStars.size()); ++i)
+			levelCompletedStars[i]->render();
 	}
 
 	if(pauseActive && gameOverVao != 0)

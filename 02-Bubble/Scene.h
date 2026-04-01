@@ -15,6 +15,7 @@
 #include "Bomb.h"
 #include "ShieldItem.h"
 #include "ClockItem.h"
+#include "Sprite.h"
 
 // Scene contains all the entities of our game.
 // It is responsible for updating and render them.
@@ -91,12 +92,15 @@ private:
 	GLint explosionPosLocation, explosionTexCoordLocation;
     Texture gameOverTexture;
     Texture levelCompletedTexture;
+    Texture nextLevelTexture;
 	GLuint gameOverVao, gameOverVbo;
 	GLint gameOverPosLocation, gameOverTexCoordLocation;
     Texture pauseMenuTexture;
 	Texture bombHudTexture;
+  Texture starsTexture;
 	GLuint bombHudVao, bombHudVbo;
 	GLint bombHudPosLocation, bombHudTexCoordLocation;
+ std::vector<Sprite*> levelCompletedStars;
 	bool playerDeathActive;
   bool gameOverActive;
 	int gameOverTimerMs;

@@ -69,7 +69,12 @@ namespace
    const float PAUSE_MENU_DARKEN_FACTOR = 0.45f;
 	const int HUD_BOMB_ICON_SIZE_PX = 16;
 	const int HUD_ICON_SPACING_PX = 15;
-    const int HUD_BOMB_ROW_Y_PX = 16;
+   const int HUD_KEY_ROW_Y_PX = 16;
+   const int HUD_KEY_COUNTER_Y_PX = 20;
+	const int HUD_BOMB_ROW_Y_PX = 32;
+  const int HUD_KEY_COUNTER_START_X_PX = 25;
+	const int HUD_KEY_DIGIT_TILE_COUNT = 10;
+	const int HUD_KEY_DIGIT_WIDTH_PX = 11;
    const int ENEMY_BULLET_SIZE_PX = 16;
 	const int ENEMY_BULLET_SPEED_PX = 2;
 	const int ENEMY_BULLET_SPAWN_OFFSET_X_PX = 8;
@@ -123,6 +128,14 @@ Scene::Scene()
 	bombHudVbo = 0;
 	bombHudPosLocation = -1;
 	bombHudTexCoordLocation = -1;
+  keyHudVao = 0;
+	keyHudVbo = 0;
+	keyHudPosLocation = -1;
+	keyHudTexCoordLocation = -1;
+  keyCounterVao = 0;
+	keyCounterVbo = 0;
+	keyCounterPosLocation = -1;
+	keyCounterTexCoordLocation = -1;
 	playerDeathActive = false;
  gameOverActive = false;
 	gameOverTimerMs = 0;
@@ -172,10 +185,14 @@ Scene::~Scene()
 		glDeleteVertexArrays(1, &bombHudVao);
 	if(bombHudVbo != 0)
 		glDeleteBuffers(1, &bombHudVbo);
-   if(bombHudVao != 0)
-		glDeleteVertexArrays(1, &bombHudVao);
-	if(bombHudVbo != 0)
-		glDeleteBuffers(1, &bombHudVbo);
+  if(keyHudVao != 0)
+		glDeleteVertexArrays(1, &keyHudVao);
+	if(keyHudVbo != 0)
+		glDeleteBuffers(1, &keyHudVbo);
+ if(keyCounterVao != 0)
+		glDeleteVertexArrays(1, &keyCounterVao);
+	if(keyCounterVbo != 0)
+		glDeleteBuffers(1, &keyCounterVbo);
    for(int i = 0; i < int(levelCompletedStars.size()); ++i)
 		delete levelCompletedStars[i];
 	levelCompletedStars.clear();
@@ -327,6 +344,18 @@ void Scene::init(const std::string &sceneName)
 	bombHudTexture.setMinFilter(GL_NEAREST);
 	bombHudTexture.setMagFilter(GL_NEAREST);
 
+    keyCounterTexture.loadFromFile("images/numbers.png", TEXTURE_PIXEL_FORMAT_RGBA);
+	keyCounterTexture.setWrapS(GL_CLAMP_TO_EDGE);
+	keyCounterTexture.setWrapT(GL_CLAMP_TO_EDGE);
+	keyCounterTexture.setMinFilter(GL_NEAREST);
+	keyCounterTexture.setMagFilter(GL_NEAREST);
+
+	hudKeyTexture.loadFromFile("images/hudkey.png", TEXTURE_PIXEL_FORMAT_RGBA);
+	hudKeyTexture.setWrapS(GL_CLAMP_TO_EDGE);
+	hudKeyTexture.setWrapT(GL_CLAMP_TO_EDGE);
+	hudKeyTexture.setMinFilter(GL_NEAREST);
+	hudKeyTexture.setMagFilter(GL_NEAREST);
+
 	float bombHudVertices[16] = {
 		0.f, 0.f, 0.f, 0.f,
 		float(HUD_BOMB_ICON_SIZE_PX), 0.f, 1.f, 0.f,
@@ -341,6 +370,47 @@ void Scene::init(const std::string &sceneName)
 	glBufferData(GL_ARRAY_BUFFER, sizeof(bombHudVertices), bombHudVertices, GL_STATIC_DRAW);
 	bombHudPosLocation = texProgram.bindVertexAttribute("position", 2, 4 * sizeof(float), 0);
 	bombHudTexCoordLocation = texProgram.bindVertexAttribute("texCoord", 2, 4 * sizeof(float), (void *)(2 * sizeof(float)));
+
+	if(keyHudVao != 0)
+		glDeleteVertexArrays(1, &keyHudVao);
+	if(keyHudVbo != 0)
+		glDeleteBuffers(1, &keyHudVbo);
+
+	float keyHudVertices[16] = {
+		0.f, 0.f, 0.f, 0.f,
+		float(hudKeyTexture.width()), 0.f, 1.f, 0.f,
+		float(hudKeyTexture.width()), float(hudKeyTexture.height()), 1.f, 1.f,
+		0.f, float(hudKeyTexture.height()), 0.f, 1.f
+	};
+
+	glGenVertexArrays(1, &keyHudVao);
+	glBindVertexArray(keyHudVao);
+	glGenBuffers(1, &keyHudVbo);
+	glBindBuffer(GL_ARRAY_BUFFER, keyHudVbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(keyHudVertices), keyHudVertices, GL_STATIC_DRAW);
+	keyHudPosLocation = texProgram.bindVertexAttribute("position", 2, 4 * sizeof(float), 0);
+	keyHudTexCoordLocation = texProgram.bindVertexAttribute("texCoord", 2, 4 * sizeof(float), (void *)(2 * sizeof(float)));
+
+	if(keyCounterVao != 0)
+		glDeleteVertexArrays(1, &keyCounterVao);
+	if(keyCounterVbo != 0)
+		glDeleteBuffers(1, &keyCounterVbo);
+
+	const float digitUvWidth = 1.f / float(HUD_KEY_DIGIT_TILE_COUNT);
+	float keyCounterVertices[16] = {
+		0.f, 0.f, 0.f, 0.f,
+		float(HUD_KEY_DIGIT_WIDTH_PX), 0.f, digitUvWidth, 0.f,
+		float(HUD_KEY_DIGIT_WIDTH_PX), float(keyCounterTexture.height()), digitUvWidth, 1.f,
+		0.f, float(keyCounterTexture.height()), 0.f, 1.f
+	};
+
+	glGenVertexArrays(1, &keyCounterVao);
+	glBindVertexArray(keyCounterVao);
+	glGenBuffers(1, &keyCounterVbo);
+	glBindBuffer(GL_ARRAY_BUFFER, keyCounterVbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(keyCounterVertices), keyCounterVertices, GL_STATIC_DRAW);
+	keyCounterPosLocation = texProgram.bindVertexAttribute("position", 2, 4 * sizeof(float), 0);
+	keyCounterTexCoordLocation = texProgram.bindVertexAttribute("texCoord", 2, 4 * sizeof(float), (void *)(2 * sizeof(float)));
 
 	gameOverTexture.loadFromFile("images/Game over.png", TEXTURE_PIXEL_FORMAT_RGBA);
 	gameOverTexture.setWrapS(GL_CLAMP_TO_EDGE);
@@ -1032,6 +1102,38 @@ void Scene::render()
 
 	if(bombHudVao != 0)
 	{
+      int keyCount = player->getKeyCount();
+		if(keyCount < 0) keyCount = 0;
+		if(keyCount > 9) keyCount = 9;
+		if(keyHudVao != 0)
+		{
+			glm::mat4 keyHudModelview = glm::translate(glm::mat4(1.0f), glm::vec3(0.f, float(HUD_KEY_ROW_Y_PX), 0.f));
+			texProgram.setUniformMatrix4f("modelview", keyHudModelview);
+			texProgram.setUniform2f("texCoordDispl", 0.f, 0.f);
+			glEnable(GL_TEXTURE_2D);
+			hudKeyTexture.use();
+			glBindVertexArray(keyHudVao);
+			glEnableVertexAttribArray(keyHudPosLocation);
+			glEnableVertexAttribArray(keyHudTexCoordLocation);
+			glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+			glDisable(GL_TEXTURE_2D);
+		}
+
+       if(keyCounterVao != 0)
+		{
+          const float digitUvWidth = 1.f / float(HUD_KEY_DIGIT_TILE_COUNT);
+            glm::mat4 keyCounterModelview = glm::translate(glm::mat4(1.0f), glm::vec3(float(HUD_KEY_COUNTER_START_X_PX), float(HUD_KEY_COUNTER_Y_PX), 0.f));
+			texProgram.setUniformMatrix4f("modelview", keyCounterModelview);
+         texProgram.setUniform2f("texCoordDispl", float(keyCount) * digitUvWidth, 0.f);
+			glEnable(GL_TEXTURE_2D);
+			keyCounterTexture.use();
+          glBindVertexArray(keyCounterVao);
+			glEnableVertexAttribArray(keyCounterPosLocation);
+			glEnableVertexAttribArray(keyCounterTexCoordLocation);
+			glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+			glDisable(GL_TEXTURE_2D);
+		}
+
 		int carriedBombs = 0;
 		for(int i = 0; i < int(bombs.size()); ++i)
 			if(bombs[i]->isCollected())

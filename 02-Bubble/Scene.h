@@ -106,9 +106,15 @@ private:
 	GLint gameOverPosLocation, gameOverTexCoordLocation;
     Texture pauseMenuTexture;
 	Texture bombHudTexture;
+ Texture hudKeyTexture;
+	Texture keyCounterTexture;
   Texture starsTexture;
 	GLuint bombHudVao, bombHudVbo;
 	GLint bombHudPosLocation, bombHudTexCoordLocation;
+  GLuint keyHudVao, keyHudVbo;
+	GLint keyHudPosLocation, keyHudTexCoordLocation;
+  GLuint keyCounterVao, keyCounterVbo;
+	GLint keyCounterPosLocation, keyCounterTexCoordLocation;
  std::vector<Sprite*> levelCompletedStars;
 	bool playerDeathActive;
   bool gameOverActive;

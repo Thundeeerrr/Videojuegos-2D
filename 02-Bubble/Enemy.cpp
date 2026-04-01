@@ -80,7 +80,12 @@ void Enemy::setPosition(const glm::vec2 &pos)
 {
 	posEnemy = glm::ivec2(int(pos.x), int(pos.y));
 	if(sprite != NULL)
-		sprite->setPosition(glm::vec2(float(tileMapDispl.x + posEnemy.x), float(tileMapDispl.y + posEnemy.y)));
+ {
+		const int visualOffsetY = COLLISION_H_PX - frameHeightPx;
+		sprite->setPosition(glm::vec2(
+			float(tileMapDispl.x + posEnemy.x),
+			float(tileMapDispl.y + posEnemy.y + visualOffsetY)));
+	}
 }
 
 glm::vec2 Enemy::getPosition() const

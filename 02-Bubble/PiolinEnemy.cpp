@@ -124,13 +124,14 @@ void PiolinEnemy::enforceHorizontalPatrolRange(float minX, float maxX)
 	if(!hasPatrolBaseY)
 	{
 		hasPatrolBaseY = true;
-		int correctedY = int(std::round(pos.y));
+        int correctedY = int(std::round(pos.y));
 		if(map != NULL)
-			map->collisionMoveDown(glm::ivec2(int(std::round(pos.x)), correctedY), glm::ivec2(COLLISION_W_PX, COLLISION_H_PX), &correctedY);
-       const int oneTilePx = (map != NULL) ? map->getTileSize() : COLLISION_H_PX;
-		// Enemy world Y is top-left of collision box. In this constrained patrol case,
-		// we lift one tile so Piolin's feet rest on the platform top like Donald/player.
-		patrolBaseY = correctedY - oneTilePx;
+        {
+			const int tileSize = map->getTileSize();
+			int probeY = correctedY + tileSize;
+			map->collisionMoveDown(glm::ivec2(int(std::round(pos.x)), probeY), glm::ivec2(COLLISION_W_PX, COLLISION_H_PX), &correctedY);
+		}
+       patrolBaseY = correctedY;
 	}
 
 	// Keep Piolin on his original patrol platform Y in constrained patrol maps.

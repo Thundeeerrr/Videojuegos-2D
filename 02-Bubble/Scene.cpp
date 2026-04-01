@@ -80,7 +80,7 @@ namespace
 	const int ENEMY_BULLET_SPAWN_OFFSET_X_PX = 8;
    // Franco sprite is 32px tall and rendered 16px above its collision box.
 	// Using enemy world Y (collision top) places bullet at sprite half-height.
-	const int ENEMY_BULLET_SPAWN_OFFSET_Y_PX = 12;
+	const int ENEMY_BULLET_SPAWN_OFFSET_Y_PX = 0;
     const int LEVEL02_PIOLIN_MIN_COL = 4;
 	const int LEVEL02_PIOLIN_MAX_COL = 14;
 	const int LEVEL05_FRANCO_MIN_COL = 2;
@@ -863,16 +863,7 @@ void Scene::update(int deltaTime)
 	glm::ivec2 playerTilePos((int(playerPos.x) + 8) / map->getTileSize(),(int(playerPos.y) + 15) / map->getTileSize());
     auto getEnemyInteractionPos = [&](Enemy *enemy) -> glm::vec2
 	{
-		glm::vec2 pos = enemy->getPosition();
-     if((currentLevelNum == 2 && enemy->getType() == Enemy::Type::PIOLIN) ||
-		   (currentLevelNum == 5 && enemy->getType() == Enemy::Type::FRANCO))
-		{
-         // Constrained horizontal patrol uses a visual-alignment Y lock.
-			// Shift interaction box one tile down so player/items contact matches
-			// on-screen sprite contact without moving enemy rendering.
-			pos.y += float(map->getTileSize());
-		}
-		return pos;
+		return enemy->getPosition();
 	};
 	for (int i = 0; i < Enemies.size(); ++i)	
 	{

@@ -71,6 +71,7 @@ private:
 	glm::mat4 projection;
 	bool dWasPressed;
 	bool hasDoorTarget;
+   bool doorTargetIsLockedExit;
 	glm::ivec2 doorTargetTilePos;
 	bool hasSpawnOverride;
 	glm::ivec2 spawnTileOverride;
@@ -89,6 +90,7 @@ private:
 	GLuint explosionVao, explosionVbo;
 	GLint explosionPosLocation, explosionTexCoordLocation;
     Texture gameOverTexture;
+    Texture levelCompletedTexture;
 	GLuint gameOverVao, gameOverVbo;
 	GLint gameOverPosLocation, gameOverTexCoordLocation;
     Texture pauseMenuTexture;
@@ -98,6 +100,8 @@ private:
 	bool playerDeathActive;
   bool gameOverActive;
 	int gameOverTimerMs;
+  bool levelCompletedActive;
+	int levelCompletedTimerMs;
  int playerShieldHitInvulnTimerMs;
  int clockFreezeTimerMs;
   bool pauseActive;

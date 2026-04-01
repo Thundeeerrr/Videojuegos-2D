@@ -34,12 +34,13 @@ namespace
     const float PLAYER_FRAME_WIDTH_PX = 14.f;
   const float PLAYER_COLLISION_WIDTH_PX = 16.f;
 	const float PLAYER_COLLISION_HEIGHT_PX = 16.f;
-	const float PLAYER_SPRITE_HEIGHT_PX = 24.f;
+ const float PLAYER_SPRITE_HEIGHT_PX = 32.f;
 	const float PLAYER_VISUAL_OFFSET_Y_PX = PLAYER_COLLISION_HEIGHT_PX - PLAYER_SPRITE_HEIGHT_PX;
    const float SHIELD_FRAME_WIDTH_PX = 24.f;
 	const float SHIELD_FRAME_HEIGHT_PX = 25.f;
 	const float SHIELD_VISUAL_OFFSET_X_PX = (PLAYER_COLLISION_WIDTH_PX - SHIELD_FRAME_WIDTH_PX) * 0.5f;
-	const float SHIELD_VISUAL_OFFSET_Y_PX = (PLAYER_COLLISION_HEIGHT_PX - SHIELD_FRAME_HEIGHT_PX) * 0.5f;
+   const float SHIELD_EXTRA_UP_OFFSET_PX = -4.f;
+	const float SHIELD_VISUAL_OFFSET_Y_PX = ((PLAYER_COLLISION_HEIGHT_PX - SHIELD_FRAME_HEIGHT_PX) * 0.5f) + SHIELD_EXTRA_UP_OFFSET_PX;
 	const int SHIELD_ANIM_FRAMES = 3;
 	const int SHIELD_ANIM_FPS = 8;
   const int DOOR_TELEPORT_EXIT_OFFSET_PX = int(PLAYER_COLLISION_HEIGHT_PX / 2.f);
@@ -117,7 +118,7 @@ void Player::init(const glm::ivec2 &tileMapPos, ShaderProgram &shaderProgram)
 	shieldTexture.setMinFilter(GL_NEAREST);
 	shieldTexture.setMagFilter(GL_NEAREST);
 	//sprite = Sprite::createSprite(glm::ivec2(16, 16), glm::vec2(0.25, 0.25), &spritesheet, &shaderProgram);
-	sprite = Sprite::createSprite(glm::ivec2(16, 24),
+   sprite = Sprite::createSprite(glm::ivec2(16, 32),
 		glm::vec2(1.f / 8.f, 1.f / 12.f),
 		&spritesheet, &shaderProgram);
 	healthSprite = Sprite::createSprite(glm::ivec2(16, 16), glm::vec2(1.0, 1.0), &healthTexture, &shaderProgram);

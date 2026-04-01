@@ -8,12 +8,17 @@ namespace
 	const int DOOR_WIDTH = 16;
 	const int DOOR_HEIGHT = 24;
 	const int DOOR_OFFSET_Y = 8;
+   const int DOOR_SPRITE_ROWS = 3;
+	const int DOOR_ROW_OPEN = 0;
+	const int DOOR_ROW_NORMAL_CLOSED = 1;
+	const int DOOR_ROW_LOCKED_CLOSED = 2;
 }
 
 Door::Door()
 {
 	worldPos = glm::vec2(0.f);
 	tilePos = glm::ivec2(0);
+ type = Type::Normal;
 	isOpen = false;
 	vao = 0;
 	vbo = 0;
@@ -30,9 +35,10 @@ Door::~Door()
 		glDeleteBuffers(1, &vbo);
 }
 
-void Door::init(const glm::ivec2 &tilePos, ShaderProgram &shaderProgram)
+void Door::init(const glm::ivec2 &tilePos, Type type, ShaderProgram &shaderProgram)
 {
 	this->tilePos = tilePos;
+   this->type = type;
 	this->shaderProgram = &shaderProgram;
 	isOpen = false;
 
@@ -45,8 +51,10 @@ void Door::init(const glm::ivec2 &tilePos, ShaderProgram &shaderProgram)
 	doorTexture.setMinFilter(GL_NEAREST);
 	doorTexture.setMagFilter(GL_NEAREST);
 
-	const float uvY0 = 0.5f;
-	const float uvY1 = 1.f;
+    const float rowUvSize = 1.f / float(DOOR_SPRITE_ROWS);
+	const int closedRow = (type == Type::LockedExit) ? DOOR_ROW_LOCKED_CLOSED : DOOR_ROW_NORMAL_CLOSED;
+	const float uvY0 = rowUvSize * closedRow;
+	const float uvY1 = uvY0 + rowUvSize;
 	float vertices[16] = {
 		0.f, 0.f, 0.f, uvY0,
 		float(DOOR_WIDTH), 0.f, 1.f, uvY0,
@@ -85,9 +93,9 @@ void Door::toggleOpen()
 {
 	isOpen = !isOpen;
 	if(isOpen)
-		updateUvs(0.f, 0.5f);
+       updateUvsForRow(DOOR_ROW_OPEN);
 	else
-		updateUvs(0.5f, 1.f);
+       updateUvsForRow((type == Type::LockedExit) ? DOOR_ROW_LOCKED_CLOSED : DOOR_ROW_NORMAL_CLOSED);
 }
 
 void Door::open()
@@ -96,8 +104,11 @@ void Door::open()
 		toggleOpen();
 }
 
-void Door::updateUvs(float uvY0, float uvY1)
+void Door::updateUvsForRow(int rowIndex)
 {
+    const float rowUvSize = 1.f / float(DOOR_SPRITE_ROWS);
+	const float uvY0 = rowUvSize * rowIndex;
+	const float uvY1 = uvY0 + rowUvSize;
 	float uvs[8] = {
 		0.f, uvY0,
 		1.f, uvY0,

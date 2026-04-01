@@ -28,6 +28,7 @@ namespace
 	const int EXPLOSION_FRAME_COUNT = 5;
 	const int EXPLOSION_DURATION_MS = 400;
    const int CLOCK_FREEZE_DURATION_MS = 3000;
+   const int LEVEL_COMPLETED_DURATION_MS = 4000;
   const int GAME_OVER_DURATION_MS = 5000;
 	const int GAME_OVER_APPEAR_TIME_MS = 700;
 	const float GAME_OVER_DARKEN_FACTOR = 0.45f;
@@ -56,6 +57,7 @@ Scene::Scene()
 	player = NULL;
    dWasPressed = false;
 	hasDoorTarget = false;
+   doorTargetIsLockedExit = false;
 	hasSpawnOverride = false;
   spawnAtDoorInLoadedLevel = false;
 	doorTargetTilePos = glm::ivec2(0);
@@ -77,6 +79,8 @@ Scene::Scene()
 	playerDeathActive = false;
  gameOverActive = false;
 	gameOverTimerMs = 0;
+   levelCompletedActive = false;
+	levelCompletedTimerMs = 0;
     playerShieldHitInvulnTimerMs = 0;
 	pauseActive = false;
 	pWasPressed = false;
@@ -129,7 +133,9 @@ void Scene::init(const std::string &sceneName)
 	freeDoors();
 	freeKeys();
 	freeEnemies();
- freeBombs();
+   freeBombs();
+	freeShieldItems();
+	freeClockItems();
 	map = TileMap::createTileMap(sceneName, glm::vec2(SCREEN_X, SCREEN_Y), texProgram);
  map->clearDoorLinks();
    if(currentLevelNum == 2)
@@ -149,11 +155,17 @@ void Scene::init(const std::string &sceneName)
 		map->addDoorLink(glm::ivec2(8, 8), glm::ivec2(7, 10));
 	}
 	const std::vector<glm::ivec2> &doorPositions = map->getDoorPositions();
+    const bool hasExplicitLockedExitDoor = map->hasLockedExitDoorObject();
 	const std::unordered_set<glm::ivec2, TileMap::IVec2Hash> &keyPositions = map->getKeyPositions();
 	for(int i=0; i<int(doorPositions.size()); ++i)
 	{
 		Door *door = new Door();
-		door->init(doorPositions[i], texProgram);
+       Door::Type doorType = Door::Type::Normal;
+		if(map->isLockedExitDoorObject(doorPositions[i]))
+			doorType = Door::Type::LockedExit;
+		else if(!hasExplicitLockedExitDoor && currentLevelNum != 0 && i == 0)
+			doorType = Door::Type::LockedExit;
+		door->init(doorPositions[i], doorType, texProgram);
 		doors.push_back(door);
 	}
 	for(auto it=keyPositions.begin(); it != keyPositions.end(); ++it)
@@ -195,6 +207,8 @@ void Scene::init(const std::string &sceneName)
   playerDeathActive = false;
     gameOverActive = false;
 	gameOverTimerMs = 0;
+    levelCompletedActive = false;
+	levelCompletedTimerMs = 0;
 	enemyExplosions.clear();
 	spaceWasPressed = false;
 
@@ -273,6 +287,12 @@ void Scene::init(const std::string &sceneName)
 	glBufferData(GL_ARRAY_BUFFER, sizeof(gameOverVertices), gameOverVertices, GL_STATIC_DRAW);
 	gameOverPosLocation = texProgram.bindVertexAttribute("position", 2, 4 * sizeof(float), 0);
 	gameOverTexCoordLocation = texProgram.bindVertexAttribute("texCoord", 2, 4 * sizeof(float), (void *)(2 * sizeof(float)));
+
+	levelCompletedTexture.loadFromFile("images/lvl-Completed.png", TEXTURE_PIXEL_FORMAT_RGBA);
+	levelCompletedTexture.setWrapS(GL_CLAMP_TO_EDGE);
+	levelCompletedTexture.setWrapT(GL_CLAMP_TO_EDGE);
+	levelCompletedTexture.setMinFilter(GL_NEAREST);
+	levelCompletedTexture.setMagFilter(GL_NEAREST);
 
 	pauseMenuTexture.loadFromFile("images/Pause-Menu.png", TEXTURE_PIXEL_FORMAT_RGBA);
 	pauseMenuTexture.setWrapS(GL_CLAMP_TO_EDGE);
@@ -356,6 +376,7 @@ void Scene::init(const std::string &sceneName)
 	currentTime = 0.0f;
 	dWasPressed = false;
 	hasDoorTarget = false;
+   doorTargetIsLockedExit = false;
 }
 
 void Scene::update(int deltaTime)
@@ -390,15 +411,34 @@ void Scene::update(int deltaTime)
 		Enemy::Freeze();
 	else
 		Enemy::Unfreeze();
-	if(dPressed && !dWasPressed)
+    if(dPressed && !dWasPressed)
 	{
-		for(int i=0; i<int(doors.size()); ++i)
-			doors[i]->toggleOpen();
+      if(keys.empty())
+		{
+			for(int i=0; i<int(doors.size()); ++i)
+             if(!doors[i]->isLockedExit())
+					doors[i]->toggleOpen();
+		}
 	}
 	dWasPressed = dPressed;
 
 	for(int i=0; i<int(doors.size()); ++i)
 		doors[i]->update(deltaTime);
+
+	if(levelCompletedActive)
+	{
+		levelCompletedTimerMs -= deltaTime;
+		if(levelCompletedTimerMs <= 0)
+		{
+			levelCompletedActive = false;
+			int nextLevel = currentLevelNum + 1;
+			if(nextLevel > 5)
+				Game::instance().changeState(STATE_MENU);
+			else
+				loadLevel(nextLevel);
+		}
+		return;
+	}
 
 	if(playerShieldHitInvulnTimerMs > 0)
 	{
@@ -685,6 +725,12 @@ void Scene::update(int deltaTime)
 		int doorIdx = findClosestDoorIndex(playerTilePos);
 		if(doorIdx >= 0)
 		{
+          if(doors[doorIdx]->isLockedExit() && !keys.empty())
+			{
+				player->resetDoorState();
+				return;
+			}
+
 			doors[doorIdx]->open();
            if(currentLevelNum != 0)
 			{
@@ -694,8 +740,9 @@ void Scene::update(int deltaTime)
 					openedDoors.push_back(openedDoorPos);
 			}
 			hasDoorTarget = true;
+           doorTargetIsLockedExit = doors[doorIdx]->isLockedExit();
 			doorTargetTilePos = doors[doorIdx]->getTilePos();
-           if(currentLevelNum != 0)
+         if(currentLevelNum != 0 && !doorTargetIsLockedExit)
 			{
 				hasReturnPoint = true;
 				returnLevelNum = currentLevelNum;
@@ -719,9 +766,14 @@ void Scene::update(int deltaTime)
 		}
 		else
 		{
-			// Entering key room from normal level: suspend level first.
+            if(doorTargetIsLockedExit)
+			{
+				levelCompletedActive = true;
+				levelCompletedTimerMs = LEVEL_COMPLETED_DURATION_MS;
+				return;
+			}
+
 			suspendCurrentLevelForKeyRoom();
-			spawnAtDoorInLoadedLevel = hasDoorTarget;
 			loadLevel(0);
 			return;
 		}
@@ -730,46 +782,43 @@ void Scene::update(int deltaTime)
 
 void Scene::render()
 {
-	glm::mat4 modelview;
+    glm::mat4 modelview(1.0f);
 
 	texProgram.use();
 	texProgram.setUniformMatrix4f("projection", projection);
-    float sceneDarken = 1.f;
+
+	float sceneDarken = 1.f;
 	if(gameOverActive)
 		sceneDarken = GAME_OVER_DARKEN_FACTOR;
+	else if(levelCompletedActive)
+		sceneDarken = PAUSE_MENU_DARKEN_FACTOR;
 	else if(pauseActive)
 		sceneDarken = PAUSE_MENU_DARKEN_FACTOR;
+
 	texProgram.setUniform4f("color", sceneDarken, sceneDarken, sceneDarken, 1.0f);
-	modelview = glm::mat4(1.0f);
 	texProgram.setUniformMatrix4f("modelview", modelview);
 	texProgram.setUniform2f("texCoordDispl", 0.f, 0.f);
+
 	map->render();
-   for(int i=0; i<int(doors.size()); ++i)
-		doors[i]->render();
-   for(int i=0; i<int(keys.size()); ++i)
-		keys[i]->render();
-   for(int i=0; i<int(weights.size()); ++i)
-		weights[i]->render();
-    for(int i=0; i<int(bombs.size()); ++i)
-		bombs[i]->render();
-    for(int i=0; i<int(clockItems.size()); ++i)
-		clockItems[i]->render();
-    for(int i=0; i<int(shieldItems.size()); ++i)
-		shieldItems[i]->render();
-   player->render();
-    if(bombHudVao != 0)
+	for(int i=0; i<int(doors.size()); ++i) doors[i]->render();
+	for(int i=0; i<int(keys.size()); ++i) keys[i]->render();
+	for(int i=0; i<int(weights.size()); ++i) weights[i]->render();
+	for(int i=0; i<int(bombs.size()); ++i) bombs[i]->render();
+	for(int i=0; i<int(clockItems.size()); ++i) clockItems[i]->render();
+	for(int i=0; i<int(shieldItems.size()); ++i) shieldItems[i]->render();
+	player->render();
+
+	if(bombHudVao != 0)
 	{
 		int carriedBombs = 0;
 		for(int i = 0; i < int(bombs.size()); ++i)
-		{
 			if(bombs[i]->isCollected())
 				++carriedBombs;
-		}
 
-     const float startX = 0.f;
+		const float startX = 0.f;
 		for(int i = 0; i < carriedBombs; ++i)
 		{
-         glm::mat4 bombHudModelview = glm::translate(glm::mat4(1.0f), glm::vec3(startX + float(i * HUD_ICON_SPACING_PX), float(HUD_BOMB_ROW_Y_PX), 0.f));
+			glm::mat4 bombHudModelview = glm::translate(glm::mat4(1.0f), glm::vec3(startX + float(i * HUD_ICON_SPACING_PX), float(HUD_BOMB_ROW_Y_PX), 0.f));
 			texProgram.setUniformMatrix4f("modelview", bombHudModelview);
 			texProgram.setUniform2f("texCoordDispl", 0.f, 0.f);
 			glEnable(GL_TEXTURE_2D);
@@ -781,11 +830,12 @@ void Scene::render()
 			glDisable(GL_TEXTURE_2D);
 		}
 	}
-    texProgram.setUniform4f("color", sceneDarken, sceneDarken, sceneDarken, 1.0f);
-   for (int i = 0; i < int(Enemies.size()); ++i)
+
+	texProgram.setUniform4f("color", sceneDarken, sceneDarken, sceneDarken, 1.0f);
+	for(int i = 0; i < int(Enemies.size()); ++i)
 		Enemies[i]->render();
-    texProgram.setUniform4f("color", sceneDarken, sceneDarken, sceneDarken, 1.0f);
-   if(explosionVao != 0)
+
+	if(explosionVao != 0)
 	{
 		const float frameWidthUv = 1.f / float(EXPLOSION_FRAME_COUNT);
 		for(int i = 0; i < int(enemyExplosions.size()); ++i)
@@ -806,34 +856,48 @@ void Scene::render()
 			glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 			glDisable(GL_TEXTURE_2D);
 		}
-   if(pauseActive && gameOverVao != 0)
+	}
+
+	if(gameOverActive && gameOverVao != 0)
 	{
-		texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
-		glm::mat4 pauseModelview = glm::mat4(1.0f);
-		texProgram.setUniformMatrix4f("modelview", pauseModelview);
+		int elapsedMs = GAME_OVER_DURATION_MS - gameOverTimerMs;
+		if(elapsedMs < 0) elapsedMs = 0;
+		float appearAlpha = float(elapsedMs) / float(GAME_OVER_APPEAR_TIME_MS);
+		if(appearAlpha > 1.f) appearAlpha = 1.f;
+
+		texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, appearAlpha);
+		texProgram.setUniformMatrix4f("modelview", glm::mat4(1.0f));
 		texProgram.setUniform2f("texCoordDispl", 0.f, 0.f);
 		glEnable(GL_TEXTURE_2D);
-		pauseMenuTexture.use();
+		gameOverTexture.use();
 		glBindVertexArray(gameOverVao);
 		glEnableVertexAttribArray(gameOverPosLocation);
 		glEnableVertexAttribArray(gameOverTexCoordLocation);
 		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 		glDisable(GL_TEXTURE_2D);
 	}
-	}
-   if(gameOverActive && gameOverVao != 0)
-	{
-       int elapsedMs = GAME_OVER_DURATION_MS - gameOverTimerMs;
-		if(elapsedMs < 0) elapsedMs = 0;
-		float appearAlpha = float(elapsedMs) / float(GAME_OVER_APPEAR_TIME_MS);
-		if(appearAlpha > 1.f) appearAlpha = 1.f;
 
-		texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, appearAlpha);
-		glm::mat4 gameOverModelview = glm::mat4(1.0f);
-		texProgram.setUniformMatrix4f("modelview", gameOverModelview);
+	if(levelCompletedActive && gameOverVao != 0)
+	{
+		texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
+		texProgram.setUniformMatrix4f("modelview", glm::mat4(1.0f));
 		texProgram.setUniform2f("texCoordDispl", 0.f, 0.f);
 		glEnable(GL_TEXTURE_2D);
-		gameOverTexture.use();
+		levelCompletedTexture.use();
+		glBindVertexArray(gameOverVao);
+		glEnableVertexAttribArray(gameOverPosLocation);
+		glEnableVertexAttribArray(gameOverTexCoordLocation);
+		glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+		glDisable(GL_TEXTURE_2D);
+	}
+
+	if(pauseActive && gameOverVao != 0)
+	{
+		texProgram.setUniform4f("color", 1.0f, 1.0f, 1.0f, 1.0f);
+		texProgram.setUniformMatrix4f("modelview", glm::mat4(1.0f));
+		texProgram.setUniform2f("texCoordDispl", 0.f, 0.f);
+		glEnable(GL_TEXTURE_2D);
+		pauseMenuTexture.use();
 		glBindVertexArray(gameOverVao);
 		glEnableVertexAttribArray(gameOverPosLocation);
 		glEnableVertexAttribArray(gameOverTexCoordLocation);
@@ -930,6 +994,8 @@ void Scene::resetForNewGame()
 	remainingLives = MAX_LIVES;
  gameOverActive = false;
 	gameOverTimerMs = 0;
+  levelCompletedActive = false;
+	levelCompletedTimerMs = 0;
    clockFreezeTimerMs = 0;
  pauseActive = false;
 	pWasPressed = false;
@@ -939,6 +1005,7 @@ void Scene::resetForNewGame()
 	hasReturnPoint = false;
 	hasSpawnOverride = false;
 	hasDoorTarget = false;
+   doorTargetIsLockedExit = false;
 	spawnAtDoorInLoadedLevel = false;
 }
 
@@ -978,6 +1045,8 @@ void Scene::loadLevel(int levelNum)
 	playerDeathActive = false;
     gameOverActive = false;
 	gameOverTimerMs = 0;
+  levelCompletedActive = false;
+	levelCompletedTimerMs = 0;
    clockFreezeTimerMs = 0;
     playerShieldHitInvulnTimerMs = 0;
 	enemyExplosions.clear();
@@ -1021,6 +1090,8 @@ void Scene::loadLevelFile(const std::string &levelPath)
 	playerDeathActive = false;
     gameOverActive = false;
 	gameOverTimerMs = 0;
+  levelCompletedActive = false;
+	levelCompletedTimerMs = 0;
    clockFreezeTimerMs = 0;
     playerShieldHitInvulnTimerMs = 0;
 	enemyExplosions.clear();

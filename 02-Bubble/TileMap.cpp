@@ -11,6 +11,7 @@ using namespace std;
 namespace
 {
 	const int TILE_DOOR = 999;
+   const int TILE_DOOR_LOCKED_EXIT = 1000;
  const int TILE_TUBE_A_TOP = 992;
 	const int TILE_TUBE_A_BOTTOM = 997;
 	const int TILE_TUBE_B_TOP = 996;
@@ -160,6 +161,7 @@ bool TileMap::loadLevel(const string &levelFile)
 	// Read the collided tiles, first read the quantity of collided tiles and then the tile ids. Clear the set of collided tiles before reading them in case of changing levels.
 	collidedTiles.clear();
  doorPositions.clear();
+    lockedExitDoorPositions.clear();
 	tubeConnections.clear();
    tubeAlwaysBottomRenderTiles.clear();
     vector<glm::ivec2> tubeATopTiles;
@@ -203,9 +205,16 @@ bool TileMap::loadLevel(const string &levelFile)
 		for (int i = 0; i < mapSize.x; i++)
 		{
 			fin >> tileId; // This safely reads 1, 9, 10, or 45, automatically ignoring spaces!
-            if(tileId == TILE_DOOR)
+         if(tileId == TILE_DOOR)
 			{
 				doorPositions.push_back(glm::ivec2(i, j));
+				map[j * mapSize.x + i] = -1;
+			}
+          else if(tileId == TILE_DOOR_LOCKED_EXIT)
+			{
+				glm::ivec2 doorPos(i, j);
+				doorPositions.push_back(doorPos);
+				lockedExitDoorPositions.insert(doorPos);
 				map[j * mapSize.x + i] = -1;
 			}
             else if(tileId == TILE_TUBE_A_TOP)
@@ -532,6 +541,16 @@ bool TileMap::isDoorTile(const glm::ivec2 &tilePos) const
 
 	int tile = map[tilePos.y * mapSize.x + tilePos.x];
 	return tile == DOOR_TILE_STAIRS || tile == DOOR_TILE_NO_STAIRS;
+}
+
+bool TileMap::isLockedExitDoorObject(const glm::ivec2 &tilePos) const
+{
+	return lockedExitDoorPositions.find(tilePos) != lockedExitDoorPositions.end();
+}
+
+bool TileMap::hasLockedExitDoorObject() const
+{
+	return !lockedExitDoorPositions.empty();
 }
 
 bool TileMap::isTubeTile(const glm::ivec2 &pos, bool topVariant) const

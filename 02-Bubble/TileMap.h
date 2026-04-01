@@ -61,6 +61,8 @@ public:
 	bool isStairTileForBody(const glm::ivec2 &pos, const glm::ivec2 &size) const;
 	bool isStairTile(const glm::ivec2& pos) const; // keep for Player compatibility
     bool isDoorTile(const glm::ivec2 &tilePos) const;
+   bool isLockedExitDoorObject(const glm::ivec2 &tilePos) const;
+	bool hasLockedExitDoorObject() const;
    bool isTubeTile(const glm::ivec2 &pos, bool topVariant) const;
 	glm::ivec2 getTubeExit(const glm::ivec2 &entryTile) const;
   bool isTubeBottomTile(const glm::ivec2 &tilePos) const;
@@ -104,6 +106,7 @@ private:
 	int *map;
 	set<int> collidedTiles;
 	vector<glm::ivec2> doorPositions;
+  std::unordered_set<glm::ivec2, IVec2Hash> lockedExitDoorPositions;
    vector<glm::ivec2> weightPositions;
  vector<glm::ivec2> clockPositions;
     vector<glm::ivec2> shieldPositions;

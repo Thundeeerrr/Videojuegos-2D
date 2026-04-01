@@ -253,7 +253,7 @@ bool TileMap::loadLevel(const string &levelFile)
             else if(tileId == TILE_KEY)
 			{
 				keyPositions.insert(glm::ivec2(i, j));
-                map[j * mapSize.x + i] = markerBackgroundTileId;
+                map[j * mapSize.x + i] = map[j * mapSize.x + i - 1];
 			}
             else if(tileId == WEIGHT_TILE)
 			{
@@ -485,13 +485,14 @@ bool TileMap::collisionMoveDown(const glm::ivec2 &pos, const glm::ivec2 &size, i
 	int x0, x1, y;
 	
 	x0 = pos.x / tileSize;
+	if (x0 < 0)
+		x0 = 0;
 	x1 = (pos.x + size.x - 1) / tileSize;
 	y = (pos.y + size.y - 1) / tileSize;
 	bool tryToClimbDown = Game::instance().getKey(GLFW_KEY_DOWN);
 	for(int x=x0; x<=x1; x++)
 	{
       int tile = map[y * mapSize.x + x];
-		if (tryToClimbDown) cout << "Trying to climb down. Checking tile at (" << x << ", " << y << ") with tile ID: " << tile << endl;
 		if(collidedTiles.find(tile) != collidedTiles.end() || tile == -2)
 		{
 				*posY = tileSize * y - size.y;

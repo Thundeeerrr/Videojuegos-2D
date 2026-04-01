@@ -985,7 +985,10 @@ void Scene::loadLevel(int levelNum)
 	if(levelNum == 0)
 	{
      currentLevelNum = 0;
-	 if (hasReturnPoint && containsDoorTile(collectedRoomKeys[returnLevelNum], returnTilePos))	init("levels/KeyRoom_collected.txt");
+	 if (hasReturnPoint && containsDoorTile(collectedRoomKeys[returnLevelNum], returnTilePos))	
+	 {init("levels/KeyRoom_collected.txt");
+		 cout << "Loading key room with collected keys: " << collectedRoomKeys[returnLevelNum].size() << endl;
+	 }
 	 else init("levels/KeyRoom.txt");
 		return;
 	}

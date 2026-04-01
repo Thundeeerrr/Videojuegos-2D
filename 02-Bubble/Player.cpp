@@ -423,6 +423,60 @@ void Player::update(int deltaTime)
   bool leftPressed = Game::instance().getKey(GLFW_KEY_LEFT);
 	bool rightPressed = Game::instance().getKey(GLFW_KEY_RIGHT);
  int moveStep = bJumpPlatformActive ? 1 : 2;
+ const int MAX_RAMP_SNAP_UP_PX = 4; // moveStep(2) + 1, prevents wall climbing
+ const int MAX_LIP_STEP_UP_PX = 8;
+ bool movedHorizontally = false;
+ bool rampSnapped = false;
+ auto tryStepUpAfterBlockedMove = [&](int dir) -> bool
+{
+	for (int stepUp = 1; stepUp <= MAX_LIP_STEP_UP_PX; ++stepUp)
+	{
+		glm::ivec2 candidate = posPlayer;
+		candidate.y -= stepUp;
+		candidate.x += dir * moveStep;
+
+		bool blocked = (dir < 0)
+			? map->collisionMoveLeft(candidate, glm::ivec2(16, 16))
+			: map->collisionMoveRight(candidate, glm::ivec2(16, 16));
+
+		if (blocked)
+			continue;
+
+		glm::ivec2 probeCandidate = candidate;
+		// 4 px = quarter-width of 16px collider; enough to bias to leading foot.
+		probeCandidate.x += (dir < 0) ? -4 : 4;
+
+		int landedY = probeCandidate.y;
+		bool foundGround = false;
+
+		// Sweep down up to FALL_STEP so collisionMoveDown can "see" floor/ramp contact.
+		for (int dropProbe = 0; dropProbe <= FALL_STEP; ++dropProbe)
+		{
+			glm::ivec2 p = probeCandidate;
+			p.y += dropProbe;
+
+			int corrected = p.y;
+			if (this->map->collisionMoveDown(p, glm::ivec2(16, 16), &corrected))
+			{
+				landedY = corrected;
+				foundGround = true;
+				break;
+			}
+		}
+
+		if (foundGround)
+		{
+			const int rise = posPlayer.y - landedY;
+			if (rise >= 0 && rise <= MAX_LIP_STEP_UP_PX)
+			{
+				posPlayer.x = candidate.x;
+				posPlayer.y = landedY;
+				return true;
+			}
+		}
+	}
+	return false;
+};
  if(leftPressed)
 	{
         facingRight = false;
@@ -432,8 +486,17 @@ void Player::update(int deltaTime)
 		if(map->collisionMoveLeft(posPlayer, glm::ivec2(16, 16)))
 		{
            posPlayer.x += moveStep;
-            if(!bJumpPlatformActive)
+		   if (tryStepUpAfterBlockedMove(-1))
+		   {
+			   movedHorizontally = true;
+			   rampSnapped = true;
+		   }
+           else if(!bJumpPlatformActive)
 				sprite->changeAnimation(STAND_LEFT);
+		}
+		else
+		{
+			movedHorizontally = true;
 		}
 	}
     else if(rightPressed)
@@ -445,8 +508,17 @@ void Player::update(int deltaTime)
 		if(map->collisionMoveRight(posPlayer, glm::ivec2(16, 16)))
 		{
            posPlayer.x -= moveStep;
-           if(!bJumpPlatformActive)
+		   if (tryStepUpAfterBlockedMove(1))
+		   {
+			   movedHorizontally = true;
+			   rampSnapped = true;
+		   }
+           else if(!bJumpPlatformActive)
 				sprite->changeAnimation(STAND_RIGHT);
+		}
+		else
+		{
+			movedHorizontally = true;
 		}
 	}
 	else
@@ -458,36 +530,73 @@ void Player::update(int deltaTime)
        else if(!bJumpPlatformActive && (sprite->animation() == DOOR_ENTER || sprite->animation() == DOOR_EXIT))
 			sprite->changeAnimation(STAND_RIGHT);
 	}
-	
+ // Ramp snap after horizontal movement (diagonal climb behavior)
+ if (movedHorizontally && !bJumpPlatformActive && !isTouchingStair)
+ {
+	 const int startY = posPlayer.y;
+
+	 for (int stepUp = 0; stepUp <= MAX_RAMP_SNAP_UP_PX; ++stepUp)
+	 {
+		 glm::ivec2 probePos(posPlayer.x, startY - stepUp);
+		 int correctedY = probePos.y;
+		 bool foundGround = false;
+
+		 for (int dropProbe = 0; dropProbe <= FALL_STEP; ++dropProbe)
+		 {
+			 glm::ivec2 p = probePos;
+			 p.y += dropProbe;
+
+			 int corrected = p.y;
+			 if (map->collisionMoveDown(p, glm::ivec2(16, 16), &corrected))
+			 {
+				 correctedY = corrected;
+				 foundGround = true;
+				 break;
+			 }
+		 }
+
+		 if (foundGround)
+		 {
+			 const int rise = startY - correctedY;
+			 if (rise >= 0 && rise <= MAX_LIP_STEP_UP_PX)
+			 {
+				 posPlayer.y = correctedY;
+				 rampSnapped = true;
+			 }
+			 break;
+		 }
+	 }
+ }
     bool onGround = false;
     bool horizontalPressed = leftPressed || rightPressed;
 	if (bJumpPlatformActive)
 	{
-       jumpPlatformPosY += jumpVelocity;
+		jumpPlatformPosY += jumpVelocity;
 		posPlayer.y = int(std::round(jumpPlatformPosY));
 		jumpVelocity += JUMP_PLATFORM_GRAVITY;
-       if(horizontalPressed)
+		if (horizontalPressed)
 		{
-			if(jumpPlatformInputReleased)
+			if (jumpPlatformInputReleased)
 				jumpVelocity += JUMP_PLATFORM_DAMP;
 		}
 		else
 			jumpPlatformInputReleased = true;
 
 		int adjustedY = posPlayer.y;
-		if(map->collisionMoveUp(posPlayer, glm::ivec2(16, 16), &adjustedY))
+		if (map->collisionMoveUp(posPlayer, glm::ivec2(16, 16), &adjustedY))
 		{
 			posPlayer.y = adjustedY;
-         jumpPlatformPosY = float(posPlayer.y);
+			jumpPlatformPosY = float(posPlayer.y);
 			jumpVelocity = 0.f;
 			bJumpPlatformActive = false;
 		}
-     if(jumpVelocity >= 0.f)
+		if (jumpVelocity >= 0.f)
 		{
 			jumpPlatformPosY = float(posPlayer.y);
 			bJumpPlatformActive = false;
-       }
+		}
 	}
+	else if (rampSnapped)	onGround = true;
 	else if (isTouchingStair)
 	{
 		if (Game::instance().getKey(GLFW_KEY_SPACE))	cout << "Player is touching a stair tile and space is pressed." << endl;

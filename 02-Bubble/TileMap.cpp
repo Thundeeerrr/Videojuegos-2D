@@ -148,6 +148,7 @@ bool TileMap::loadLevel(const string &levelFile)
        bombMarkerBackgroundTileId = LEVEL05_BOMB_BACKGROUND_TILE_ID;
 	   rampUpRightTileIds.insert(29);
 	   rampUpRightTileIds.insert(224);
+	   rampUpRightTileIds.insert(71);
 	   rampUpLeftTileIds.insert(26);
 	   rampUpLeftTileIds.insert(190);
 	}
@@ -463,7 +464,7 @@ bool TileMap::collisionMoveLeft(const glm::ivec2 &pos, const glm::ivec2 &size) c
 	const int x = pos.x / tileSize;
 
 	// Lower-body probe only: top 40% ignored to avoid false blocking by overhead tiles.
-	const int probeTopOffsetPx = (size.y * 2) / 5;
+	const int probeTopOffsetPx = (size.y / 2);
 	const int y0 = (pos.y + probeTopOffsetPx) / tileSize;
 	const int y1 = (pos.y + size.y - 1) / tileSize;
 
@@ -512,7 +513,7 @@ bool TileMap::collisionMoveRight(const glm::ivec2 &pos, const glm::ivec2 &size) 
 
 	const int x = (pos.x + size.x - 1) / tileSize;
 
-	const int probeTopOffsetPx = (size.y * 2) / 5;
+	const int probeTopOffsetPx = (size.y / 2);
 	const int y0 = (pos.y + probeTopOffsetPx) / tileSize;
 	const int y1 = (pos.y + size.y - 1) / tileSize;
 
@@ -555,7 +556,7 @@ bool TileMap::collisionMoveDown(const glm::ivec2 &pos, const glm::ivec2 &size, i
 			return true;
 		}
 
-		if(collidedTiles.find(tile) == collidedTiles.end())
+		if(collidedTiles.find(tile) == collidedTiles.end() && !isRampTile(tile))
 			continue;
 
 		if(isRampTile(tile))

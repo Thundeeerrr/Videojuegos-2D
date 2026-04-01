@@ -502,7 +502,8 @@ void Player::update(int deltaTime)
            if(sprite->animation() != PLANT_CLIMB_DOWN)
 				sprite->changeAnimation(PLANT_CLIMB_DOWN);
 			posPlayer.y += 2;
-			map->collisionMoveDown(posPlayer, glm::ivec2(16, 16), &posPlayer.y);
+			//map->collisionMoveDown(posPlayer, glm::ivec2(16, 16), &posPlayer.y);
+			if (!map->isStairTile(posPlayer))	posPlayer.y -= 2;
 		}
        onGround = true;
 	}

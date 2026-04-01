@@ -60,6 +60,16 @@ bool FrancoEnemy::getForcedAnimationId(int &animId) const
 	return false;
 }
 
+bool FrancoEnemy::consumePendingShot(int &dirSign)
+{
+	if(pendingShotDir == 0)
+		return false;
+
+	dirSign = pendingShotDir;
+	pendingShotDir = 0;
+	return true;
+}
+
 void FrancoEnemy::stepAI(int deltaTime, const glm::ivec2 &bugsTilePos)
 {
     if(shootAnimRemainingMs > 0)
@@ -75,6 +85,7 @@ void FrancoEnemy::stepAI(int deltaTime, const glm::ivec2 &bugsTilePos)
 	{
 		shootCooldownMs = SHOOT_INTERVAL_MS;
 		shootAnimRemainingMs = SHOOT_ANIM_DURATION_MS;
+     pendingShotDir = facingRight ? 1 : -1;
 		return;
 	}
 

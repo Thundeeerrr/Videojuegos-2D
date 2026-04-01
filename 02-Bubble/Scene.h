@@ -29,6 +29,12 @@ class Scene
 		int timerMs;
 	};
 
+	struct EnemyBullet
+	{
+		glm::vec2 pos;
+		int dirSign;
+	};
+
 public:
 	Scene();
 	~Scene();
@@ -90,6 +96,9 @@ private:
 	Texture explosionTexture;
 	GLuint explosionVao, explosionVbo;
 	GLint explosionPosLocation, explosionTexCoordLocation;
+    Texture enemyBulletTexture;
+	GLuint enemyBulletVao, enemyBulletVbo;
+	GLint enemyBulletPosLocation, enemyBulletTexCoordLocation;
     Texture gameOverTexture;
     Texture levelCompletedTexture;
     Texture nextLevelTexture;
@@ -112,6 +121,7 @@ private:
 	bool pWasPressed;
 	bool hWasPressed;
 	std::vector<EnemyExplosion> enemyExplosions;
+ std::vector<EnemyBullet> enemyBullets;
 	int remainingLives;
 	static const int MAX_LIVES = 3;
 
@@ -128,6 +138,7 @@ private:
    std::vector<ClockItem*> suspendedClockItems;
 	std::vector<Enemy*> suspendedEnemies;
 	std::vector<bool> suspendedWeightPushLatch;
+  std::vector<EnemyBullet> suspendedEnemyBullets;
 };
 
 

@@ -70,6 +70,10 @@ namespace
 	const int HUD_BOMB_ICON_SIZE_PX = 16;
 	const int HUD_ICON_SPACING_PX = 15;
     const int HUD_BOMB_ROW_Y_PX = 16;
+   const int ENEMY_BULLET_SIZE_PX = 16;
+	const int ENEMY_BULLET_SPEED_PX = 2;
+	const int ENEMY_BULLET_SPAWN_OFFSET_X_PX = 8;
+	const int ENEMY_BULLET_SPAWN_OFFSET_Y_PX = 8;
     const int LEVEL02_PIOLIN_MIN_COL = 4;
 	const int LEVEL02_PIOLIN_MAX_COL = 14;
 	const int LEVEL05_FRANCO_MIN_COL = 2;
@@ -109,6 +113,10 @@ Scene::Scene()
 	explosionVbo = 0;
 	explosionPosLocation = -1;
 	explosionTexCoordLocation = -1;
+   enemyBulletVao = 0;
+	enemyBulletVbo = 0;
+	enemyBulletPosLocation = -1;
+	enemyBulletTexCoordLocation = -1;
   bombHudVao = 0;
 	bombHudVbo = 0;
 	bombHudPosLocation = -1;
@@ -123,6 +131,7 @@ Scene::Scene()
 	pWasPressed = false;
 	hWasPressed = false;
    enemyExplosions.clear();
+  enemyBullets.clear();
    remainingLives = MAX_LIVES;
    spaceWasPressed = false;
   clockFreezeTimerMs = 0;
@@ -149,6 +158,10 @@ Scene::~Scene()
 		glDeleteVertexArrays(1, &explosionVao);
 	if(explosionVbo != 0)
 		glDeleteBuffers(1, &explosionVbo);
+ if(enemyBulletVao != 0)
+		glDeleteVertexArrays(1, &enemyBulletVao);
+	if(enemyBulletVbo != 0)
+		glDeleteBuffers(1, &enemyBulletVbo);
    if(gameOverVao != 0)
 		glDeleteVertexArrays(1, &gameOverVao);
 	if(gameOverVbo != 0)
@@ -250,6 +263,7 @@ void Scene::init(const std::string &sceneName)
     levelCompletedActive = false;
 	levelCompletedTimerMs = 0;
 	enemyExplosions.clear();
+    enemyBullets.clear();
 	spaceWasPressed = false;
 
    explosionTexture.loadFromFile("images/Explosions.png", TEXTURE_PIXEL_FORMAT_RGBA);
@@ -278,6 +292,32 @@ void Scene::init(const std::string &sceneName)
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 	explosionPosLocation = texProgram.bindVertexAttribute("position", 2, 4 * sizeof(float), 0);
 	explosionTexCoordLocation = texProgram.bindVertexAttribute("texCoord", 2, 4 * sizeof(float), (void *)(2 * sizeof(float)));
+
+	enemyBulletTexture.loadFromFile("images/bullet.png", TEXTURE_PIXEL_FORMAT_RGBA);
+	enemyBulletTexture.setWrapS(GL_CLAMP_TO_EDGE);
+	enemyBulletTexture.setWrapT(GL_CLAMP_TO_EDGE);
+	enemyBulletTexture.setMinFilter(GL_NEAREST);
+	enemyBulletTexture.setMagFilter(GL_NEAREST);
+
+	if(enemyBulletVao != 0)
+		glDeleteVertexArrays(1, &enemyBulletVao);
+	if(enemyBulletVbo != 0)
+		glDeleteBuffers(1, &enemyBulletVbo);
+
+	float bulletVertices[16] = {
+		0.f, 0.f, 0.f, 0.f,
+		16.f, 0.f, 1.f, 0.f,
+		16.f, 16.f, 1.f, 1.f,
+		0.f, 16.f, 0.f, 1.f
+	};
+
+	glGenVertexArrays(1, &enemyBulletVao);
+	glBindVertexArray(enemyBulletVao);
+	glGenBuffers(1, &enemyBulletVbo);
+	glBindBuffer(GL_ARRAY_BUFFER, enemyBulletVbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(bulletVertices), bulletVertices, GL_STATIC_DRAW);
+	enemyBulletPosLocation = texProgram.bindVertexAttribute("position", 2, 4 * sizeof(float), 0);
+	enemyBulletTexCoordLocation = texProgram.bindVertexAttribute("texCoord", 2, 4 * sizeof(float), (void *)(2 * sizeof(float)));
 
   bombHudTexture.loadFromFile("images/bomba.png", TEXTURE_PIXEL_FORMAT_RGBA);
 	bombHudTexture.setWrapS(GL_CLAMP_TO_EDGE);
@@ -696,7 +736,36 @@ void Scene::update(int deltaTime)
 			const float maxX = float(LEVEL05_FRANCO_MAX_COL * tileSize);
 			FrancoEnemy *franco = static_cast<FrancoEnemy*>(Enemies[i]);
 			franco->enforceHorizontalPatrolRange(minX, maxX);
+
+			int shotDir = 0;
+			if(franco->consumePendingShot(shotDir))
+			{
+				EnemyBullet bullet;
+				const glm::vec2 enemyPos = getEnemyInteractionPos(Enemies[i]);
+				const glm::ivec2 enemySize = Enemies[i]->getCollisionSize();
+				bullet.dirSign = shotDir;
+				if(shotDir > 0)
+					bullet.pos = enemyPos + glm::vec2(float(enemySize.x + ENEMY_BULLET_SPAWN_OFFSET_X_PX), float(ENEMY_BULLET_SPAWN_OFFSET_Y_PX));
+				else
+					bullet.pos = enemyPos + glm::vec2(float(-ENEMY_BULLET_SIZE_PX - ENEMY_BULLET_SPAWN_OFFSET_X_PX), float(ENEMY_BULLET_SPAWN_OFFSET_Y_PX));
+				enemyBullets.push_back(bullet);
+			}
 		}
+	}
+
+	if(clockFreezeTimerMs == 0 && !player->isDoorInteractionStarted())
+	{
+		for(int i = 0; i < int(enemyBullets.size()); ++i)
+			enemyBullets[i].pos.x += float(enemyBullets[i].dirSign * ENEMY_BULLET_SPEED_PX);
+	}
+
+	const float mapPixelW = map->getMapSize().x * map->getTileSize();
+	for(int i = 0; i < int(enemyBullets.size()); )
+	{
+		if(enemyBullets[i].pos.x >= mapPixelW || (enemyBullets[i].pos.x + ENEMY_BULLET_SIZE_PX) <= 0.f)
+			enemyBullets.erase(enemyBullets.begin() + i);
+		else
+			++i;
 	}
 	for (int i = 0; i < int(Enemies.size()); )
 	{
@@ -747,21 +816,45 @@ void Scene::update(int deltaTime)
 	{
 		glm::vec2 playerPosNow = player->getPosition();
 		glm::ivec2 playerSizeNow = player->getSize();
-		for(int i = 0; i < int(Enemies.size()); ++i)
+       bool bulletHitHandled = false;
+		for(int i = 0; i < int(enemyBullets.size()); ++i)
 		{
-            if(collidesWith(playerPosNow, playerSizeNow, getEnemyInteractionPos(Enemies[i]), Enemies[i]->getCollisionSize()))
+			if(collidesWith(playerPosNow, playerSizeNow, enemyBullets[i].pos, glm::ivec2(ENEMY_BULLET_SIZE_PX, ENEMY_BULLET_SIZE_PX)))
 			{
-               if(player->hasShield())
-                {
+				enemyBullets.erase(enemyBullets.begin() + i);
+				if(player->hasShield())
+				{
 					player->consumeShield();
-                    playerShieldHitInvulnTimerMs = SHIELD_HIT_INVULN_TIME_MS;
+					playerShieldHitInvulnTimerMs = SHIELD_HIT_INVULN_TIME_MS;
 				}
 				else
 				{
 					playerDeathActive = true;
 					player->startDeathAnimation();
 				}
+              bulletHitHandled = true;
 				break;
+			}
+		}
+
+		if(!bulletHitHandled)
+		{
+           for(int i = 0; i < int(Enemies.size()); ++i)
+			{
+              if(collidesWith(playerPosNow, playerSizeNow, getEnemyInteractionPos(Enemies[i]), Enemies[i]->getCollisionSize()))
+				{
+                   if(player->hasShield())
+					 {
+						player->consumeShield();
+						playerShieldHitInvulnTimerMs = SHIELD_HIT_INVULN_TIME_MS;
+					}
+					else
+					{
+						playerDeathActive = true;
+						player->startDeathAnimation();
+					}
+					break;
+				}
 			}
 		}
 	}
@@ -960,6 +1053,22 @@ void Scene::render()
 	texProgram.setUniform4f("color", sceneDarken, sceneDarken, sceneDarken, 1.0f);
 	for(int i = 0; i < int(Enemies.size()); ++i)
 		Enemies[i]->render();
+	if(enemyBulletVao != 0)
+	{
+		for(int i = 0; i < int(enemyBullets.size()); ++i)
+		{
+			glm::mat4 bulletModelview = glm::translate(glm::mat4(1.0f), glm::vec3(enemyBullets[i].pos.x, enemyBullets[i].pos.y, 0.f));
+			texProgram.setUniformMatrix4f("modelview", bulletModelview);
+			texProgram.setUniform2f("texCoordDispl", 0.f, 0.f);
+			glEnable(GL_TEXTURE_2D);
+			enemyBulletTexture.use();
+			glBindVertexArray(enemyBulletVao);
+			glEnableVertexAttribArray(enemyBulletPosLocation);
+			glEnableVertexAttribArray(enemyBulletTexCoordLocation);
+			glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+			glDisable(GL_TEXTURE_2D);
+		}
+	}
 
 	if(explosionVao != 0)
 	{
@@ -1144,6 +1253,7 @@ void Scene::resetForNewGame()
 	hasDoorTarget = false;
    doorTargetIsLockedExit = false;
 	spawnAtDoorInLoadedLevel = false;
+   enemyBullets.clear();
 }
 
 void Scene::restartCurrentLevel()
@@ -1187,6 +1297,7 @@ void Scene::loadLevel(int levelNum)
    clockFreezeTimerMs = 0;
     playerShieldHitInvulnTimerMs = 0;
 	enemyExplosions.clear();
+	enemyBullets.clear();
 
 	if(levelNum == 0)
 	{
@@ -1235,6 +1346,7 @@ void Scene::loadLevelFile(const std::string &levelPath)
    clockFreezeTimerMs = 0;
     playerShieldHitInvulnTimerMs = 0;
 	enemyExplosions.clear();
+	enemyBullets.clear();
 
 	init(levelPath);
 }
@@ -1291,6 +1403,7 @@ void Scene::clearSuspendedLevel()
    suspendedClockItems.clear();
 	suspendedEnemies.clear();
 	suspendedWeightPushLatch.clear();
+	suspendedEnemyBullets.clear();
 
 	hasSuspendedLevel = false;
 	suspendedLevelNum = -1;
@@ -1315,6 +1428,7 @@ void Scene::suspendCurrentLevelForKeyRoom()
  suspendedClockItems.swap(clockItems);
 	suspendedEnemies.swap(Enemies);
 	suspendedWeightPushLatch.swap(weightPushLatch);
+   suspendedEnemyBullets.swap(enemyBullets);
 }
 
 void Scene::restoreSuspendedLevelFromKeyRoom()
@@ -1346,6 +1460,7 @@ void Scene::restoreSuspendedLevelFromKeyRoom()
  clockItems.swap(suspendedClockItems);
 	Enemies.swap(suspendedEnemies);
 	weightPushLatch.swap(suspendedWeightPushLatch);
+	enemyBullets.swap(suspendedEnemyBullets);
 
 	currentLevelNum = suspendedLevelNum;
 

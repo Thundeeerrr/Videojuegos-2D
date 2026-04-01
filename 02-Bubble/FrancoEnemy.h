@@ -8,6 +8,7 @@ class FrancoEnemy : public Enemy
 public:
 	Type getType() const override { return Type::FRANCO; }
 	void enforceHorizontalPatrolRange(float minX, float maxX);
+	bool consumePendingShot(int &dirSign);
 
 protected:
 	const char* getTextureFile() const override;
@@ -29,6 +30,7 @@ private:
 	static const int SHOOT_ANIM_DURATION_MS = (SHOOT_FRAMES * 1000) / SHOOT_FPS;
 	int shootCooldownMs = SHOOT_INTERVAL_MS;
 	int shootAnimRemainingMs = 0;
+  int pendingShotDir = 0;
   bool hasPatrolBaseY = false;
 	int patrolBaseY = 0;
 };

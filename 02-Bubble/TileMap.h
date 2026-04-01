@@ -90,6 +90,11 @@ private:
 	int encodeTile(glm::ivec2 pos) const;
 	glm::ivec2 decodeTile(int key) const;
 
+	bool isRampTile(int tileId) const;
+	bool isRampUpRightTile(int tileId) const;
+	bool isRampUpLeftTile(int tileId) const;
+	int getRampSurfaceWorldY(int tileX, int tileY, int tileId, int worldProbeX) const;
+
 private:
 	GLuint vao;
 	GLuint vbo;
@@ -118,6 +123,8 @@ private:
 	std::unordered_set<glm::ivec2, IVec2Hash> keyPositions;
   std::unordered_map<int, int> doorLinks;
   int keyCount;
+  std::unordered_set<int> rampUpRightTileIds;
+  std::unordered_set<int> rampUpLeftTileIds;
 };
 
 

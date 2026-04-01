@@ -85,6 +85,59 @@ namespace
 	const int LEVEL02_PIOLIN_MAX_COL = 14;
 	const int LEVEL05_FRANCO_MIN_COL = 2;
 	const int LEVEL05_FRANCO_MAX_COL = 13;
+	const int ITEM_ROOM_KEY = 0;
+	const int ITEM_ROOM_SHIELD = 1;
+	const int ITEM_ROOM_BOMB = 2;
+	const int ITEM_ROOM_EMPTY_KEY = 3;
+
+	int getItemRoomTypeForDoor(int levelNum, const glm::ivec2 &doorTilePos)
+	{
+		if(levelNum == 2)
+		{
+			if(doorTilePos == glm::ivec2(3, 7))
+				return ITEM_ROOM_BOMB;
+			if(doorTilePos == glm::ivec2(8, 5))
+				return ITEM_ROOM_SHIELD;
+           if(doorTilePos == glm::ivec2(15, 5))
+				return ITEM_ROOM_EMPTY_KEY;
+		}
+		else if(levelNum == 3)
+		{
+			if(doorTilePos == glm::ivec2(9, 5))
+				return ITEM_ROOM_SHIELD;
+            if(doorTilePos == glm::ivec2(14, 7))
+				return ITEM_ROOM_BOMB;
+			if(doorTilePos == glm::ivec2(13, 1))
+				return ITEM_ROOM_EMPTY_KEY;
+		}
+      else if(levelNum == 4)
+		{
+			if(doorTilePos == glm::ivec2(7, 1))
+				return ITEM_ROOM_BOMB;
+			if(doorTilePos == glm::ivec2(14, 1))
+				return ITEM_ROOM_EMPTY_KEY;
+			if(doorTilePos == glm::ivec2(14, 9))
+				return ITEM_ROOM_EMPTY_KEY;
+		}
+      else if(levelNum == 5)
+		{
+			if(doorTilePos == glm::ivec2(6, 6))
+				return ITEM_ROOM_EMPTY_KEY;
+			if(doorTilePos == glm::ivec2(13, 8))
+				return ITEM_ROOM_BOMB;
+			if(doorTilePos == glm::ivec2(4, 4))
+				return ITEM_ROOM_SHIELD;
+		}
+		else if(levelNum == 4)
+		{
+			if(doorTilePos == glm::ivec2(14, 9))
+				return ITEM_ROOM_EMPTY_KEY;
+			if(doorTilePos == glm::ivec2(7, 1))
+				return ITEM_ROOM_BOMB;
+		}
+
+		return ITEM_ROOM_KEY;
+	}
 
 	bool containsDoorTile(const std::vector<glm::ivec2> &tiles, const glm::ivec2 &tile)
 	{
@@ -110,6 +163,10 @@ Scene::Scene()
   spawnAtDoorInLoadedLevel = false;
 	doorTargetTilePos = glm::ivec2(0);
 	spawnTileOverride = glm::ivec2(0);
+    pendingItemRoomType = ITEM_ROOM_KEY;
+    pendingCarryBombFromRoom = false;
+	pendingCarryShieldFromRoom = false;
+    carriedBombsBeforeRoom = 0;
     currentLevelNum = 1;
 	hasReturnPoint = false;
 	returnLevelNum = 1;
@@ -696,7 +753,23 @@ void Scene::update(int deltaTime)
 				gameOverTimerMs = GAME_OVER_DURATION_MS;
 			}
 			else
+         {
+				if(currentLevelNum > 0)
+				{
+					openedDoorsByLevel.erase(currentLevelNum);
+					collectedRoomKeys.erase(currentLevelNum);
+				}
+				hasReturnPoint = false;
+				hasDoorTarget = false;
+				doorTargetIsLockedExit = false;
+				hasSpawnOverride = false;
+				spawnAtDoorInLoadedLevel = false;
+				pendingItemRoomType = ITEM_ROOM_KEY;
+				pendingCarryBombFromRoom = false;
+				pendingCarryShieldFromRoom = false;
+				carriedBombsBeforeRoom = 0;
 				loadLevel(currentLevelNum);
+           }
 		}
 		return;
 	}
@@ -764,7 +837,11 @@ void Scene::update(int deltaTime)
 	for(int i=0; i<int(bombs.size()); ++i)
 	{
 		if(bombs[i]->canBeCollected() && collidesWith(playerPos, playerSize, bombs[i]->getPosition(), bombs[i]->getSize()))
+        {
 			bombs[i]->collect();
+			if(currentLevelNum == 0 && hasReturnPoint)
+				pendingCarryBombFromRoom = true;
+		}
 	}
  for(int i=0; i<int(shieldItems.size()); ++i)
 	{
@@ -772,6 +849,8 @@ void Scene::update(int deltaTime)
 		{
 			shieldItems[i]->collect();
 			player->activateShield();
+           if(currentLevelNum == 0 && hasReturnPoint)
+				pendingCarryShieldFromRoom = true;
 		}
 	}
  for(int i=0; i<int(clockItems.size()); ++i)
@@ -1041,6 +1120,7 @@ void Scene::update(int deltaTime)
 			hasDoorTarget = true;
            doorTargetIsLockedExit = doors[doorIdx]->isLockedExit();
 			doorTargetTilePos = doors[doorIdx]->getTilePos();
+            pendingItemRoomType = getItemRoomTypeForDoor(currentLevelNum, doorTargetTilePos);
          if(currentLevelNum != 0 && !doorTargetIsLockedExit)
 			{
 				hasReturnPoint = true;
@@ -1072,6 +1152,8 @@ void Scene::update(int deltaTime)
 				return;
 			}
 
+            pendingCarryBombFromRoom = false;
+			pendingCarryShieldFromRoom = false;
             spawnAtDoorInLoadedLevel = true;
 			suspendCurrentLevelForKeyRoom();
 			loadLevel(0);
@@ -1368,6 +1450,10 @@ void Scene::resetForNewGame()
 	hasDoorTarget = false;
    doorTargetIsLockedExit = false;
 	spawnAtDoorInLoadedLevel = false;
+   pendingItemRoomType = ITEM_ROOM_KEY;
+    pendingCarryBombFromRoom = false;
+	pendingCarryShieldFromRoom = false;
+    carriedBombsBeforeRoom = 0;
    enemyBullets.clear();
 }
 
@@ -1381,7 +1467,9 @@ void Scene::restartCurrentLevel()
 
 void Scene::loadLevel(int levelNum)
 {
-    if(levelNum != currentLevelNum && levelNum >= 0)
+    // Keep player lives when entering item/key rooms (level 0).
+	// Only reset lives on normal level-to-level transitions.
+	if(levelNum != currentLevelNum && levelNum >= 1)
 		remainingLives = MAX_LIVES;
 
 	// Normal transitions should respawn, so discard any suspended snapshot.
@@ -1421,6 +1509,27 @@ void Scene::loadLevel(int levelNum)
 	if(levelNum == 0)
 	{
      currentLevelNum = 0;
+        if(pendingItemRoomType == ITEM_ROOM_BOMB)
+			init("levels/BombRoom.txt");
+		else if(pendingItemRoomType == ITEM_ROOM_SHIELD)
+			init("levels/ShieldRoom.txt");
+       else if(pendingItemRoomType == ITEM_ROOM_EMPTY_KEY)
+			init("levels/KeyRoom_collected.txt");
+		else if(hasReturnPoint && containsDoorTile(collectedRoomKeys[returnLevelNum], returnTilePos))
+		{
+			init("levels/KeyRoom_collected.txt");
+			cout << "Loading key room with collected keys: " << collectedRoomKeys[returnLevelNum].size() << endl;
+		}
+		else
+			init("levels/KeyRoom.txt");
+
+		for(int i = 0; i < carriedBombsBeforeRoom; ++i)
+		{
+			Bomb *carriedBomb = new Bomb();
+			carriedBomb->init(glm::ivec2(0, 0), texProgram);
+			carriedBomb->collect();
+			bombs.push_back(carriedBomb);
+		}
 	 if (hasReturnPoint && containsDoorTile(collectedRoomKeys[returnLevelNum], returnTilePos) || kWasPressed)	
 	 {
 		 init("levels/KeyRoom_collected.txt");
@@ -1527,6 +1636,9 @@ void Scene::clearSuspendedLevel()
 
 	hasSuspendedLevel = false;
 	suspendedLevelNum = -1;
+   pendingCarryBombFromRoom = false;
+	pendingCarryShieldFromRoom = false;
+   carriedBombsBeforeRoom = 0;
 }
 
 void Scene::suspendCurrentLevelForKeyRoom()
@@ -1539,6 +1651,12 @@ void Scene::suspendCurrentLevelForKeyRoom()
 
 	suspendedMap = map;           map = NULL;
 	suspendedPlayer = player;     player = NULL;
+	carriedBombsBeforeRoom = 0;
+	for(int i = 0; i < int(bombs.size()); ++i)
+	{
+		if(bombs[i]->isCollected())
+			++carriedBombsBeforeRoom;
+	}
 
 	suspendedDoors.swap(doors);
 	suspendedKeys.swap(keys);
@@ -1581,6 +1699,22 @@ void Scene::restoreSuspendedLevelFromKeyRoom()
 	Enemies.swap(suspendedEnemies);
 	weightPushLatch.swap(suspendedWeightPushLatch);
 	enemyBullets.swap(suspendedEnemyBullets);
+
+	if(pendingCarryShieldFromRoom && player != NULL)
+		player->activateShield();
+
+	if(pendingCarryBombFromRoom)
+	{
+		Bomb *carriedBomb = new Bomb();
+		carriedBomb->init(returnTilePos, texProgram);
+		carriedBomb->collect();
+		bombs.push_back(carriedBomb);
+	}
+
+	pendingCarryBombFromRoom = false;
+	pendingCarryShieldFromRoom = false;
+	pendingItemRoomType = ITEM_ROOM_KEY;
+	carriedBombsBeforeRoom = 0;
 
 	currentLevelNum = suspendedLevelNum;
 

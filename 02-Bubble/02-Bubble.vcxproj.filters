@@ -168,5 +168,7 @@
     <Text Include="levels\level04.txt" />
     <Text Include="levels\level05.txt" />
     <Text Include="levels\KeyRoom.txt" />
+    <Text Include="levels\ShieldRoom.txt" />
+    <Text Include="levels\BombRoom.txt" />
   </ItemGroup>
 </Project>

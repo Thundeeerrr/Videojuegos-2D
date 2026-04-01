@@ -34,6 +34,7 @@ namespace
 	const int LEVEL04_MARKER_BACKGROUND_TILE_ID = 53;
 	const int LEVEL05_MARKER_BACKGROUND_TILE_ID = 53;
 	const int DEFAULT_MARKER_BACKGROUND_TILE_ID = 53;
+  const int KEY_ROOM_MARKER_BACKGROUND_TILE_ID = 46;
 	const int TILE_BOMB = 983;
    const int TILE_CLOCK = TileMap::CLOCK_TILE;
     const int TILE_SHIELD = TileMap::SHIELD_TILE;
@@ -150,6 +151,11 @@ bool TileMap::loadLevel(const string &levelFile)
 	else if(tilesheetFile.find("level3") != string::npos)
 	{
 		markerBackgroundTileId = LEVEL03_MARKER_BACKGROUND_TILE_ID;
+	}
+    else if(tilesheetFile.find("key-room") != string::npos)
+	{
+		markerBackgroundTileId = KEY_ROOM_MARKER_BACKGROUND_TILE_ID;
+		bombMarkerBackgroundTileId = KEY_ROOM_MARKER_BACKGROUND_TILE_ID;
 	}
    bombMarkerBackgroundTileId = (bombMarkerBackgroundTileId == DEFAULT_MARKER_BACKGROUND_TILE_ID) ? markerBackgroundTileId : bombMarkerBackgroundTileId;
 	tilesheet.loadFromFile(tilesheetFile, TEXTURE_PIXEL_FORMAT_RGBA);

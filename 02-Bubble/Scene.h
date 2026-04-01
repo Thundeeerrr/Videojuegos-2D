@@ -86,6 +86,10 @@ private:
 	glm::ivec2 doorTargetTilePos;
 	bool hasSpawnOverride;
 	glm::ivec2 spawnTileOverride;
+  int pendingItemRoomType;
+  bool pendingCarryBombFromRoom;
+	bool pendingCarryShieldFromRoom;
+  int carriedBombsBeforeRoom;
     bool spawnAtDoorInLoadedLevel;
 	int currentLevelNum;
 	bool hasReturnPoint;

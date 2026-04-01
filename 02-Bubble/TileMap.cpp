@@ -31,6 +31,8 @@ namespace
 	const int LEVEL02_MARKER_BACKGROUND_TILE_ID = 53;
    const int LEVEL02_BOMB_BACKGROUND_TILE_ID = 63;
 	const int LEVEL03_MARKER_BACKGROUND_TILE_ID = 53;
+ const int LEVEL03_CLOCK_BACKGROUND_TILE_ID = 45;
+   const int LEVEL03_KEY_BACKGROUND_TILE_ID = 116;
 	const int LEVEL04_MARKER_BACKGROUND_TILE_ID = 53;
 	const int LEVEL05_MARKER_BACKGROUND_TILE_ID = 53;
 	const int DEFAULT_MARKER_BACKGROUND_TILE_ID = 53;
@@ -119,6 +121,8 @@ bool TileMap::loadLevel(const string &levelFile)
 	doorTileNoStairsRenderTileId = -1;
     int markerBackgroundTileId = DEFAULT_MARKER_BACKGROUND_TILE_ID;
     int bombMarkerBackgroundTileId = markerBackgroundTileId;
+ int clockMarkerBackgroundTileId = markerBackgroundTileId;
+ int keyMarkerBackgroundTileId = -1;
 	rampUpRightTileIds.clear();
 	rampUpLeftTileIds.clear();
 	if(tilesheetFile.find("level4-def") != string::npos)
@@ -155,16 +159,19 @@ bool TileMap::loadLevel(const string &levelFile)
        markerBackgroundTileId = LEVEL02_MARKER_BACKGROUND_TILE_ID;
        bombMarkerBackgroundTileId = LEVEL02_BOMB_BACKGROUND_TILE_ID;
 	}
-	else if(tilesheetFile.find("level3") != string::npos)
+   else if(tilesheetFile.find("level3") != string::npos || tilesheetFile.find("level03") != string::npos)
 	{
 		markerBackgroundTileId = LEVEL03_MARKER_BACKGROUND_TILE_ID;
+       clockMarkerBackgroundTileId = LEVEL03_CLOCK_BACKGROUND_TILE_ID;
+       keyMarkerBackgroundTileId = LEVEL03_KEY_BACKGROUND_TILE_ID;
 	}
     else if(tilesheetFile.find("key-room") != string::npos)
 	{
 		markerBackgroundTileId = KEY_ROOM_MARKER_BACKGROUND_TILE_ID;
 		bombMarkerBackgroundTileId = KEY_ROOM_MARKER_BACKGROUND_TILE_ID;
 	}
-   bombMarkerBackgroundTileId = (bombMarkerBackgroundTileId == DEFAULT_MARKER_BACKGROUND_TILE_ID) ? markerBackgroundTileId : bombMarkerBackgroundTileId;
+    bombMarkerBackgroundTileId = (bombMarkerBackgroundTileId == DEFAULT_MARKER_BACKGROUND_TILE_ID) ? markerBackgroundTileId : bombMarkerBackgroundTileId;
+	clockMarkerBackgroundTileId = (clockMarkerBackgroundTileId == DEFAULT_MARKER_BACKGROUND_TILE_ID) ? markerBackgroundTileId : clockMarkerBackgroundTileId;
 	tilesheet.loadFromFile(tilesheetFile, TEXTURE_PIXEL_FORMAT_RGBA);
 	tilesheet.setWrapS(GL_CLAMP_TO_EDGE);
 	tilesheet.setWrapT(GL_CLAMP_TO_EDGE);
@@ -279,7 +286,10 @@ bool TileMap::loadLevel(const string &levelFile)
             else if(tileId == TILE_KEY)
 			{
 				keyPositions.insert(glm::ivec2(i, j));
-                map[j * mapSize.x + i] = map[j * mapSize.x + i - 1];
+                if(keyMarkerBackgroundTileId >= 0)
+					map[j * mapSize.x + i] = keyMarkerBackgroundTileId;
+				else
+					map[j * mapSize.x + i] = map[j * mapSize.x + i - 1];
 			}
             else if(tileId == WEIGHT_TILE)
 			{
@@ -289,7 +299,7 @@ bool TileMap::loadLevel(const string &levelFile)
           else if(tileId == TILE_CLOCK)
 			{
 				clockPositions.push_back(glm::ivec2(i, j));
-             map[j * mapSize.x + i] = markerBackgroundTileId;
+               map[j * mapSize.x + i] = clockMarkerBackgroundTileId;
 			}
             else if(tileId == TILE_SHIELD)
 			{

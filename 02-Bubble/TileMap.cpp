@@ -138,6 +138,7 @@ bool TileMap::loadLevel(const string &levelFile)
        doorTileNoStairsRenderTileId = LEVEL04_DOOR_NO_STAIRS_RENDER_TILE_ID;
 		doorTileStairsRenderTileId = LEVEL04_DOOR_STAIRS_RENDER_TILE_ID;
        markerBackgroundTileId = LEVEL04_MARKER_BACKGROUND_TILE_ID;
+	   rampUpLeftTileIds.insert(147);
 	   
 	}
     else if(tilesheetFile.find("level5-def") != string::npos)

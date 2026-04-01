@@ -73,7 +73,9 @@ namespace
    const int ENEMY_BULLET_SIZE_PX = 16;
 	const int ENEMY_BULLET_SPEED_PX = 2;
 	const int ENEMY_BULLET_SPAWN_OFFSET_X_PX = 8;
-	const int ENEMY_BULLET_SPAWN_OFFSET_Y_PX = 8;
+   // Franco sprite is 32px tall and rendered 16px above its collision box.
+	// Using enemy world Y (collision top) places bullet at sprite half-height.
+	const int ENEMY_BULLET_SPAWN_OFFSET_Y_PX = 12;
     const int LEVEL02_PIOLIN_MIN_COL = 4;
 	const int LEVEL02_PIOLIN_MAX_COL = 14;
 	const int LEVEL05_FRANCO_MIN_COL = 2;
@@ -742,12 +744,13 @@ void Scene::update(int deltaTime)
 			{
 				EnemyBullet bullet;
 				const glm::vec2 enemyPos = getEnemyInteractionPos(Enemies[i]);
+                const glm::vec2 enemyRawPos = Enemies[i]->getPosition();
 				const glm::ivec2 enemySize = Enemies[i]->getCollisionSize();
 				bullet.dirSign = shotDir;
 				if(shotDir > 0)
-					bullet.pos = enemyPos + glm::vec2(float(enemySize.x + ENEMY_BULLET_SPAWN_OFFSET_X_PX), float(ENEMY_BULLET_SPAWN_OFFSET_Y_PX));
+                  bullet.pos = glm::vec2(enemyPos.x + float(enemySize.x + ENEMY_BULLET_SPAWN_OFFSET_X_PX), enemyRawPos.y + float(ENEMY_BULLET_SPAWN_OFFSET_Y_PX));
 				else
-					bullet.pos = enemyPos + glm::vec2(float(-ENEMY_BULLET_SIZE_PX - ENEMY_BULLET_SPAWN_OFFSET_X_PX), float(ENEMY_BULLET_SPAWN_OFFSET_Y_PX));
+                    bullet.pos = glm::vec2(enemyPos.x + float(-ENEMY_BULLET_SIZE_PX - ENEMY_BULLET_SPAWN_OFFSET_X_PX), enemyRawPos.y + float(ENEMY_BULLET_SPAWN_OFFSET_Y_PX));
 				enemyBullets.push_back(bullet);
 			}
 		}

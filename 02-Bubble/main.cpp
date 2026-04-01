@@ -54,11 +54,26 @@ int main(void)
 {
 	GLFWwindow* window;
 	ma_engine engine;
+   ma_sound menuMusic;
+	ma_sound gameplayMusic;
 	double timePerFrame = 1.f / TARGET_FRAMERATE, timePreviousFrame, currentTime;
 	if (ma_engine_init(NULL, &engine) != MA_SUCCESS) {
 		// Handle audio init failure
 		return -1;
 	}
+ if(ma_sound_init_from_file(&engine, "bgm/bgm.mp3", MA_SOUND_FLAG_STREAM, NULL, NULL, &menuMusic) != MA_SUCCESS)
+	{
+		ma_engine_uninit(&engine);
+		return -1;
+	}
+	if(ma_sound_init_from_file(&engine, "bgm/Bugs Bunny Crazy Castle 3 - Garden Level - Gerudochu.mp3", MA_SOUND_FLAG_STREAM, NULL, NULL, &gameplayMusic) != MA_SUCCESS)
+	{
+		ma_sound_uninit(&menuMusic);
+		ma_engine_uninit(&engine);
+		return -1;
+	}
+	ma_sound_set_looping(&menuMusic, MA_TRUE);
+	ma_sound_set_looping(&gameplayMusic, MA_TRUE);
     gAudioEngine = &engine;
 	gIsAudioMuted = false;
 	/* Initialize the library */
@@ -90,7 +105,8 @@ int main(void)
 	/* Init step of the game loop */
 	Game::instance().init();
 	timePreviousFrame = glfwGetTime();
-	ma_engine_play_sound(&engine, "bgm/bgm.mp3", NULL);
+ ma_sound_start(&menuMusic);
+	bool wasPlaying = false;
 	/* Loop until the user closes the window */
 	while (!glfwWindowShouldClose(window))
 	{
@@ -100,6 +116,34 @@ int main(void)
 			/* Update & render steps of the game loop */
 			if(!Game::instance().update(int(1000.0f * (currentTime - timePreviousFrame))))
 				glfwSetWindowShouldClose(window, GLFW_TRUE);
+          const bool isPlaying = (Game::instance().getCurrentState() == STATE_PLAYING);
+			if(isPlaying != wasPlaying)
+			{
+				if(isPlaying)
+				{
+					ma_sound_stop(&menuMusic);
+					ma_sound_seek_to_pcm_frame(&menuMusic, 0);
+					ma_sound_start(&gameplayMusic);
+				}
+				else
+				{
+					ma_sound_stop(&gameplayMusic);
+					ma_sound_seek_to_pcm_frame(&gameplayMusic, 0);
+					ma_sound_start(&menuMusic);
+				}
+				wasPlaying = isPlaying;
+			}
+
+			if(isPlaying && !ma_sound_is_playing(&gameplayMusic))
+			{
+				ma_sound_seek_to_pcm_frame(&gameplayMusic, 0);
+				ma_sound_start(&gameplayMusic);
+			}
+			else if(!isPlaying && !ma_sound_is_playing(&menuMusic))
+			{
+				ma_sound_seek_to_pcm_frame(&menuMusic, 0);
+				ma_sound_start(&menuMusic);
+			}
 			Game::instance().render();
 			timePreviousFrame = currentTime;
 
@@ -111,6 +155,8 @@ int main(void)
 		glfwPollEvents();
 	}
 
+  ma_sound_uninit(&gameplayMusic);
+	ma_sound_uninit(&menuMusic);
     ma_engine_uninit(&engine);
 	glfwTerminate();
 	return 0;

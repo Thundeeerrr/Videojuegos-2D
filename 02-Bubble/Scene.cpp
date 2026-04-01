@@ -703,7 +703,7 @@ void Scene::update(int deltaTime)
 			levelCompletedActive = false;
 			int nextLevel = currentLevelNum + 1;
 			if(nextLevel > 5)
-				Game::instance().changeState(STATE_MENU);
+               Game::instance().changeState(STATE_CREDITS);
 			else
 				loadLevel(nextLevel);
 		}

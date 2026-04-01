@@ -48,6 +48,7 @@ public:
 	void mousePress(int button);
 	void mouseRelease(int button);
 	void changeState(GameState newState);
+	GameState getCurrentState() const;
 
 	bool getKey(int key) const;
 
